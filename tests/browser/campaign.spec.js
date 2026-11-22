@@ -1,7 +1,7 @@
 // Every campaign screen renders for a GM with no script errors, members are
 // picked from the registered accounts or added by sign-in email, and players never receive secret events.
 const { test, expect } = require("@playwright/test");
-const { goTab, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { goTab, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("a GM creates a campaign and every tab renders", async ({ page, browser }) => {
@@ -216,8 +216,13 @@ test("an invitation's link is emailed to them and can be copied; whoever opens i
   await approve(browser, friend.email);
   expect((await api(fp, "invite_link", { email: invited }, cid)).status).toBe(403);
 
-  // Someone signed in with another email opens it and joins as a player; the invitation is used up
+  // Someone signed in with another email opens it: they are asked first, and nothing has happened until they say so
   await fp.goto(`index.html${link.slice(link.indexOf("#"))}`);
+  await expect(fp.getByRole("heading", { name: `Join Links ${gm.id}?` })).toBeVisible();
+  await expect(fp.locator(".join-card")).toContainText("as a player");
+  expect((await api(fp, "days", undefined, cid)).status).toBe(403);
+  // then they join as a player, and the invitation is used up
+  await fp.getByRole("button", { name: "Join", exact: true }).click();
   await expect(fp).toHaveURL(new RegExp(`#/c/${cid}`));
   expect((await api(fp, "days", undefined, cid)).status).toBe(200);
   await page.reload();
@@ -229,7 +234,7 @@ test("an invitation's link is emailed to them and can be copied; whoever opens i
   expect((await api(fp, "invite_accept", { token: "0".repeat(32) })).status).toBe(404);
 
   // Opened while waiting for approval, the link is kept, and taken up once they're approved
-  const r = await api(page, "member_add", { email: `pia-invite-${gm.id}@example.test`, role: "gm" }, cid);
+  const r = await api(page, "member_add", { email: `pia-invite-${gm.id}@example.test`, role: "player" }, cid);
   expect(r.json).toMatchObject({ invited: true, emailed: true });
   const lctx = await newContext(browser);
   const lp = await lctx.newPage();
@@ -239,10 +244,94 @@ test("an invitation's link is emailed to them and can be copied; whoever opens i
   await lp.goto("index.html#/");
   await approve(browser, late.email);
   await lp.reload();
+  await lp.getByRole("button", { name: "Join", exact: true }).click();
   await expect(lp).toHaveURL(new RegExp(`#/c/${cid}`));
-  expect((await api(page, "campaign", undefined, cid)).json.members.find(m => m.email === late.email)?.role).toBe("gm");
+  expect((await api(page, "campaign", undefined, cid)).json.members.find(m => m.email === late.email)?.role).toBe("player");
   await pctx.close();
   await lctx.close();
+  expectNoErrors(errors);
+});
+
+test("an invitation runs out, and one to be a co-GM is only for the address it was sent to", async ({ page, browser }) => {
+  const gm = person("Rook"), other = person("Sly"), cogm = person("Tam");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Expiry ${gm.id}`);
+  const op = await (await newContext(browser)).newPage();
+  await signIn(op, other);
+  await approve(browser, other.email);
+  const get = (p, token) => p.request.get(`api/index.php?a=invite_info&token=${token}`);
+
+  // a co-GM invitation's link, opened by another address, joins nobody
+  const g = (await api(page, "member_add", { email: cogm.email, role: "gm" }, cid)).json;
+  expect(g.invited).toBe(true);
+  expect((await get(op, g.token)).status()).toBe(403);
+  const refused = await api(op, "invite_accept", { token: g.token });
+  expect(refused.status).toBe(403);
+  expect(refused.json.error).toBe("invite_other");
+  expect((await api(op, "days", undefined, cid)).status).toBe(403);
+  // the address it was sent to joins as a GM
+  const cp = await (await newContext(browser)).newPage();
+  await signIn(cp, cogm);
+  await approve(browser, cogm.email);
+  expect(await (await get(cp, g.token)).json()).toMatchObject({ name: `Expiry ${gm.id}`, role: "gm", member: false });
+  expect((await api(cp, "invite_accept", { token: g.token })).status).toBe(200);
+  expect((await api(page, "campaign", undefined, cid)).json.members.find(m => m.email === cogm.email)?.role).toBe("gm");
+
+  // a player invitation that has run out: not by its link, and not by signing in with its address
+  const late = person("Una");
+  const inv = (await api(page, "member_add", { email: late.email, role: "player" }, cid)).json;
+  sql(`UPDATE campaign_invites SET expires_at = NOW() - INTERVAL 1 DAY WHERE campaign_id=${cid} AND email='${late.email}'`);
+  const gone = await api(op, "invite_accept", { token: inv.token });
+  expect(gone.status).toBe(404);
+  expect(gone.json.message || gone.json.error).toContain("run out");
+  const lp = await (await newContext(browser)).newPage();
+  await signIn(lp, late);
+  await approve(browser, late.email);
+  await api(lp, "campaigns");
+  expect((await api(lp, "days", undefined, cid)).status).toBe(403);
+  expect((await api(page, "campaign", undefined, cid)).json.invites.find(i => i.email === late.email)).toMatchObject({ expired: true });
+  // the GM asking for its link starts it again
+  expect((await api(page, "invite_link", { email: late.email }, cid)).json.token).toBe(inv.token);
+  expect((await api(lp, "days", undefined, cid)).status).toBe(200);
+});
+
+test("only a campaign's owner deletes it, leaves it or hands it on; a co-GM can't take it over", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Vale"), co = person("Wick");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Owned ${gm.id}`);
+  const cp = await (await newContext(browser)).newPage();
+  await signIn(cp, co);
+  await approve(browser, co.email);
+  expect((await api(page, "member_add", { email: co.email, role: "gm" }, cid)).status).toBe(200);
+  const camp = (await api(cp, "campaign", undefined, cid)).json;
+  const gmId = camp.members.find(m => m.email === gm.email).id, coId = camp.members.find(m => m.email === co.email).id;
+  expect(camp.campaign.owner_id).toBe(Number(gmId));
+
+  // the co-GM can't delete the campaign, remove the owner, make the owner a player, or name themselves owner
+  for (const [action, body] of [["campaign_delete", { confirm: "DELETE" }], ["member_remove", { user_id: gmId }], ["member_add", { user_id: gmId, role: "player" }], ["campaign_owner_set", { user_id: coId }]]) {
+    const r = await api(cp, action, body, cid);
+    expect(r.status, action).toBe(403);
+    expect(r.json.error).toBe("not_owner");
+  }
+  const list = (await api(cp, "campaigns")).json.campaigns.find(c => Number(c.id) === cid);
+  expect(list.can_delete).toBe(false);
+  expect((await api(page, "campaigns")).json.campaigns.find(c => Number(c.id) === cid).can_delete).toBe(true);
+
+  // on the Members tab the owner is marked, and hands the campaign on from the co-GM's row
+  await page.goto(`index.html#/c/${cid}/members`);
+  await expect(page.locator(".listrow.member").filter({ hasText: gm.email }).locator(".role.owner")).toHaveText("Owner");
+  const row = page.locator(".listrow.member").filter({ hasText: co.email });
+  await row.getByLabel(/^More for /).click();
+  await row.getByRole("button", { name: "Make owner" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Make owner" }).click();
+  await expect(row.locator(".role.owner")).toHaveText("Owner");
+  // now the first GM is the one who can't, and the new owner can
+  expect((await api(page, "campaign_delete", { confirm: "DELETE" }, cid)).status).toBe(403);
+  expect((await api(cp, "member_remove", { user_id: gmId }, cid)).status).toBe(200);
+  expect((await api(cp, "campaign_delete", { confirm: "DELETE" }, cid)).status).toBe(200);
   expectNoErrors(errors);
 });
 

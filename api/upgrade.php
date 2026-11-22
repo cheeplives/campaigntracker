@@ -151,6 +151,8 @@ function upgrade_steps(): array {
             'Reminders can now repeat every shift until dismissed, and be marked done.'],
         ['056_character_layouts.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'layout'),
             'A character sheet now keeps its own copy of its template, so a change to a template waits for the sheet\'s player or a GM to take it.'],
+        ['057_invite_expiry.sql', fn(PDO $p) => db_has_table($p, 'campaign_invites') && !db_has_column($p, 'campaign_invites', 'expires_at'),
+            'An invitation to a campaign now lasts 14 days (inviting the address again starts it over), and one waiting from before lasts 14 days from now.'],
     ];
 }
 

@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS campaign_invites (
   token CHAR(32) NULL,                              -- the invite link's code (#/join/<token>), migration 045
   invited_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NULL,                         -- when it can no longer be taken up (057); inviting the address again starts it over
   PRIMARY KEY (campaign_id, email),
   KEY ix_invite_email (email),
   UNIQUE KEY ux_invite_token (token),

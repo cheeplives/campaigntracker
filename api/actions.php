@@ -79,6 +79,8 @@ const ACTIONS = [
     'member_candidates' => ['get' => true, 'who' => 'gm'],
     'invite_link' => ['who' => 'gm'],
     'invite_accept' => ['who' => 'account'],
+    'invite_info' => ['get' => true, 'who' => 'account'],
+    'campaign_owner_set' => ['who' => 'gm', 'touch' => true],
     'member_add' => ['who' => 'gm', 'touch' => true],
     'member_remove' => ['who' => 'gm', 'touch' => true],
     'member_character' => ['who' => 'member', 'touch' => true],

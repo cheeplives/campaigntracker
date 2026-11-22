@@ -921,18 +921,28 @@
   const JOIN_KEY = 'chronicle.join';
   /** An invitation's link: this site's page, #/join/<its code>. */
   const inviteUrl = token => `${location.origin}${location.pathname}#/join/${token}`;
-  /** #/join/<code>: an invite link. Signed in and approved (boot sees to that), they join its campaign and go to it. */
+  /** #/join/<code>: an invite link. Signed in and approved (boot sees to that), they are shown which campaign it is for
+   * and join it when they say so: a link someone was sent never joins them to anything by being opened. */
   async function viewJoin(token) {
     try { localStorage.removeItem(JOIN_KEY); } catch { /* nothing kept */ }
-    mount(el('div', { class: 'card narrow' }, el('p', { class: 'muted' }, 'Joining the campaign…')));
-    try {
-      const r = await post('invite_accept', { token });
-      toast(`Welcome to ${r.name}`);
-      location.replace(`#/c/${r.cid}`);
-    } catch (err) {
-      mount(el('div', { class: 'card narrow' }, el('h2', {}, 'This invite link doesn\'t work'), el('p', {}, err.message),
-        el('a', { href: '#/' }, 'Go to your campaigns')));
-    }
+    const broken = err => mount(el('div', { class: 'card narrow' }, el('h2', {}, 'This invite link doesn\'t work'), el('p', {}, err.message),
+      el('a', { href: '#/' }, 'Go to your campaigns')));
+    mount(el('div', { class: 'card narrow' }, el('p', { class: 'muted' }, 'Opening the invitation…')));
+    let info;
+    try { info = await api('invite_info', { query: { token } }); } catch (err) { return broken(err); }
+    const join = btn('Join', async () => {
+      join.disabled = true;
+      try {
+        const r = await post('invite_accept', { token });
+        toast(`Welcome to ${r.name}`);
+        location.replace(`#/c/${r.cid}`);
+      } catch (err) { broken(err); }
+    }, 'primary');
+    mount(el('div', { class: 'card narrow join-card' }, el('h2', {}, `Join ${info.name}?`),
+      el('p', {}, info.member ? 'You are already in this campaign. Joining uses up the invitation and takes you there.'
+        : info.role === 'gm' ? 'You are invited to help run this campaign as a co-GM.' : 'You are invited to this campaign as a player.'),
+      el('p', { class: 'muted small' }, `The other people in it will see your name${S.user?.display_name ? ` (${S.user.display_name})` : ''}, and its GMs will see the email you sign in with.`),
+      el('div', { class: 'card-foot row' }, join, btn('Not now', () => { location.hash = '#/'; }))));
   }
   /** A dialog showing an invitation's link with a Copy button: the GM sends it to them however they like. */
   function showInviteLink(email, token, emailed) {
@@ -1166,11 +1176,11 @@
           starButton(c, draw),
           el('div', { class: 'camp-main' }, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
             c.description ? el('p', { class: 'muted' }, c.description) : null),
-          // Only a GM can copy (a copy holds the secrets) or delete one.
+          // Only a GM can copy one (a copy holds the secrets), and only its owner can delete it.
           c.role === 'gm' ? el('div', { class: 'camp-actions' }, moreMenu(c.name,
             btn('Copy…', () => copyCampaign(c), 'small', 'Make a new campaign of your own from this one: everything in it, or just its calendar and setup'),
-            el('hr'),
-            btn('Delete…', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first'))) : null)))
+            c.can_delete ? el('hr') : null,
+            c.can_delete ? btn('Delete…', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first') : null)) : null)))
         : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.')));
     draw();
   }
@@ -7054,11 +7064,13 @@
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
       S.members.map(m => {
         const self = Number(m.id) === S.user.id;
+        const ownerActs = S.camp.owner_id == null || S.camp.owner_id === S.user.id || !!S.user.is_admin;
         const sheet = sheetOf(m);
         const canLink = (self || isGM()) && !sheet && typeof Sheets !== 'undefined';
         return el('div', { class: 'listrow member' },
           el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.pronouns ? el('span', { class: 'pronouns muted' }, ` (${m.pronouns})`) : null, m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
-            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
+            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player'),
+            Number(m.id) === S.camp.owner_id ? el('span', { class: 'role owner', 'data-tip': 'The campaign is theirs: only they can delete it, leave it or hand it to another GM' }, 'Owner') : null),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
             sheet ? el('a', { class: 'charname', href: `#/c/${S.camp.id}/characters/${sheet.id}`, 'data-tip': 'Open their character sheet' }, sheet.name)
@@ -7076,8 +7088,13 @@
               canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
               canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
                 'small', 'Give this character a sheet on the Characters tab, with this name') : null,
+              // the owner (any GM once the owner has gone, or a site admin) hands the campaign to another of its GMs
+              isGM() && ownerActs && m.role === 'gm' && Number(m.id) !== S.camp.owner_id ? btn('Make owner', async () => {
+                if (!await confirmDialog(`Make ${m.display_name} the owner of this campaign? Only its owner can delete it, and only they can remove the owner. You stay a GM.`, { ok: 'Make owner' })) return;
+                try { await post('campaign_owner_set', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+              }, 'small', 'Hand the campaign to this GM: they become the one who can delete it') : null,
               el('hr'),
-              isGM() ? btn('Remove', async () => {
+              isGM() && (Number(m.id) !== S.camp.owner_id || self || S.user?.is_admin) ? btn('Remove', async () => {
                 if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
                 try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
               }, 'small danger', 'Take them out of this campaign. Their account stays') : null)));
@@ -7128,7 +7145,8 @@
       // Invitations by email not taken up yet: they become members when that person, approved, next signs in.
       if (S.invites.length) card.append(el('h3', {}, 'Invited'), ...S.invites.map(i => el('div', { class: 'listrow member invite' },
         el('div', { class: 'who' }, el('strong', {}, i.email), el('span', { class: `role ${i.role}` }, i.role === 'gm' ? 'GM' : 'Player'),
-          el('span', { class: 'muted small', 'data-tip': 'They join when they open their invite link, or sign in with this email' }, ' waiting to join')),
+          i.expired ? el('span', { class: 'muted small', 'data-tip': 'An invitation lasts 14 days. Copy invite link starts it again, with the same link' }, ' ran out')
+            : el('span', { class: 'muted small', 'data-tip': i.role === 'gm' ? 'They join when they sign in with this email. Their invite link only works for this address' : 'They join when they open their invite link, or sign in with this email' }, ' waiting to join')),
         el('div', { class: 'actions' }, btn('Copy invite link', async () => {
           try { showInviteLink(i.email, (await post('invite_link', { email: i.email }, S.camp.id)).token, false); } catch (err) { toast(err.message, true); }
         }, 'small', 'Show the link that lets them join, to send them yourself'), btn('Cancel invitation', async () => {
