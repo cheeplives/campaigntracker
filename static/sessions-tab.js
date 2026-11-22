@@ -175,7 +175,26 @@
         editor.setHtml(html, append);
         cols.dataset.show = 'summary';   // one column (a phone): show the summary it filled
       }), 'primary small', 'Fill the summary from the shifts this session ran over and your notes: each shift\'s activity with the players\' notes on it, the GM notes on a shift as GM-only paragraphs, then a paragraph per note with its indented lines, a heading per day, ! lines left out, $ lines as GM-only paragraphs and ? lines listed GM only at the end. Then rewrite it as you like, and Save');
-      const entry = notesEntry(s, notes, [draft]);
+      const fromTranscript = typeof Transcript === 'undefined' ? null : btn('Draft from transcript…', () => transcriptDialog({ s, sessions,
+        notes: () => entry.text(),
+        accept({ notesText, summaryHtml, rewardsHtml, lootHtml, title: named, replace }) {
+          if (notesText) {
+            const box = entry.box;
+            box.value = box.value.trimEnd() ? `${box.value.trimEnd()}\n${notesText}` : notesText;
+            box.dispatchEvent(new Event('input', { bubbles: true }));   // saves as typing does, and reads its > lines
+          }
+          if (summaryHtml || rewardsHtml || lootHtml) {
+            if (editing.hidden) setEditing(true);
+            if (summaryHtml) editor.setHtml(summaryHtml, !replace);
+            if (rewardsHtml) rewards?.setHtml(rewardsHtml, true);
+            if (lootHtml) loot?.setHtml(lootHtml, true);
+            cols.dataset.show = 'summary';
+          }
+          if (named && !title.value.trim()) { title.value = named; details.hidden = false; detailsBtn.setAttribute('aria-expanded', 'true'); showSave(); }
+        },
+        hasSummary: () => !!editor.value().text }), 'small',
+        'Read a transcript of the game night (from Zoom, Teams, Otter, a Discord bot or Whisper) into a draft of its notes, summary, rewards and loot, with your own Anthropic API key. You check the draft before any of it is added here');
+      const entry = notesEntry(s, notes, [draft, fromTranscript].filter(Boolean));
       // The GM reads the session as players do, with the Encyclopedia's names linked (and the GM-only paragraphs marked),
       // and Edit opens the editors. A session with nothing written yet opens in them.
       const reading = el('div', { class: 'sess-read' });
@@ -270,6 +289,210 @@
             `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })]), ' ', addShift);
       placesFrom(entry.text());
       return [where, head[0], bar, extras, details, cols, rollsCard, places, pictures];
+    }
+
+    // ------------------------------------------------------------ draft from transcript
+    const TX_STORE = () => `chronicle:transcript:${S.camp.id}`;
+    const txKept = () => { try { return JSON.parse(localStorage.getItem(TX_STORE()) || '{}') || {}; } catch { return {}; } };
+    const txKeep = v => { try { localStorage.setItem(TX_STORE(), JSON.stringify(v)); } catch { /* private mode: asked again next time */ } };
+    /** Draft from transcript: the GM picks a transcript file, says who each speaker is, and Claude (with the GM's own
+     * Anthropic key, from this browser) drafts the session from it. The GM ticks what to keep, and accept() puts it in
+     * the page's notes box and editors: nothing is saved by the dialog itself, and the transcript is kept nowhere. */
+    function transcriptDialog({ s, sessions, notes, accept, hasSummary }) {
+      const T = root.Transcript;
+      const d = el('dialog', { class: 'kit-dialog tx-dialog', 'aria-label': 'Draft from transcript' });
+      let abort = null, closed = false;
+      d.addEventListener('close', () => { closed = true; abort?.abort(); d.remove(); });
+      const show = (...nodes) => d.replaceChildren(...nodes.filter(Boolean));   // a part that doesn't apply is null
+      const heading = t => el('h3', {}, t);
+      const actions = (...b) => el('div', { class: 'kit-dialog-actions' }, ...b);
+      const cancel = () => btn('Cancel', () => d.close());
+      const key = MapScan.apiKey.get();
+      const kept = txKept();
+      const members = (S.members || []).map(m => ({ id: Number(m.id), display_name: m.display_name || '', character_name: m.character_name || '', role: m.role }));
+      const memberLabel = m => (m.role === 'gm' ? `${m.display_name}, the GM` : m.character_name && m.character_name !== m.display_name ? `${m.display_name}, playing ${m.character_name}` : m.display_name);
+      const memberName = m => (m.role === 'gm' ? `${m.display_name} (GM)` : m.character_name && m.character_name !== m.display_name ? `${m.display_name} (plays ${m.character_name})` : m.display_name);
+      let turns = [], fileName = '';
+
+      // --- step 1: the file
+      function pick(problem) {
+        const file = el('input', { type: 'file', accept: '.txt,.vtt,.srt,.md,text/plain,text/vtt', hidden: true, 'aria-label': 'Transcript file' });
+        const paste = el('textarea', { rows: 5, placeholder: 'Or paste the transcript here', 'aria-label': 'Transcript text', spellcheck: false });
+        const said = el('p', { class: 'small bad', role: 'alert' }, problem || '');
+        const read = (text, name) => {
+          if (text.length > T.MAX_CHARS) { said.textContent = 'That is too long to read in one go (over about 300,000 words). Split it in two.'; return; }
+          const got = T.parse(text);
+          if (!got.length) { said.textContent = 'No speech was found in that. It reads plain text, WebVTT (.vtt) and SubRip (.srt) transcripts.'; return; }
+          turns = got; fileName = name;
+          who();
+        };
+        file.addEventListener('change', async () => {
+          const f = file.files[0];
+          if (!f) return;
+          if (/\.(docx?|pdf|json|mp3|m4a|wav|mp4|ogg|flac|webm)$/i.test(f.name)) { said.textContent = `${f.name} isn't a kind it can read yet. Export the transcript as plain text (.txt), WebVTT (.vtt) or SubRip (.srt). It reads transcripts, not recordings.`; return; }
+          try { read(await f.text(), f.name); } catch { said.textContent = 'That file couldn\'t be read.'; }
+        });
+        show(heading('Draft from transcript'),
+          el('p', {}, 'Pick the transcript of this game night. Claude reads it and drafts the session\'s notes, summary, rewards and loot, and you choose what to keep. Nothing is added to the session until you say so.'),
+          key ? null : el('p', { class: 'tx-note' }, 'This uses your own Anthropic API key, which isn\'t saved in this browser yet. ', el('a', { href: '#/account', onclick: () => d.close() }, 'Add your key on your account page'), ', then come back.'),
+          el('div', { class: 'row' }, btn('Choose a file…', () => file.click(), 'primary', 'A .txt, .vtt or .srt transcript, as Zoom, Teams, Otter, Google Meet (downloaded as plain text), Discord transcription bots and Whisper make them'), file,
+            el('span', { class: 'small muted' }, 'Plain text, WebVTT or SubRip')),
+          paste,
+          el('div', { class: 'row' }, btn('Use the pasted text', () => { if (paste.value.trim()) read(paste.value, ''); else said.textContent = 'Paste the transcript in the box first.'; }, 'small')),
+          said,
+          el('p', { class: 'small muted' }, 'Your browser reads the file and sends the transcript straight to Anthropic with your key. It is never uploaded to this site, and isn\'t kept after the draft.'),
+          actions(cancel()));
+      }
+
+      // --- step 2: who each speaker is
+      function who() {
+        const found = T.speakers(turns);
+        const rows = found.map(sp => {
+          const anon = T.anonymous(sp.label);
+          const was = anon ? null : kept.speakers?.[sp.label];
+          const guessed = T.guess(sp.label, members);
+          const val = was !== undefined && was !== null && (was === 'asis' || was === 'out' || members.some(m => String(m.id) === String(was))) ? was : guessed !== null ? guessed : 'asis';
+          const sel = el('select', { 'aria-label': `Who is ${sp.label || 'the unnamed speaker'}` },
+            members.map(m => el('option', { value: m.id, selected: String(m.id) === String(val) }, memberLabel(m))),
+            el('option', { value: 'asis', selected: val === 'asis' }, anon ? 'Not sure: let Claude work it out' : 'Someone else (a guest)'),
+            el('option', { value: 'out', selected: val === 'out' }, 'Leave out everything they said'));
+          return { sp, anon, sel, row: el('div', { class: 'tx-speaker' },
+            el('div', { class: 'tx-speaker-who' }, el('strong', {}, sp.label || 'No name given'), el('small', { class: 'muted' }, `${sp.words.toLocaleString()} words`)),
+            sel,
+            sp.samples.length ? el('p', { class: 'small muted tx-sample' }, `“${sp.samples[0]}”`) : null) };
+        });
+        const model = el('select', { 'aria-label': 'Model' }, T.MODELS.map(m => el('option', { value: m.id, selected: m.id === (kept.model || T.MODELS[0].id) }, m.label)));
+        const agreed = el('input', { type: 'checkbox' });
+        const price = el('p', { class: 'small muted', role: 'status' });
+        const nameOf = r => {
+          const v = r.sel.value;
+          if (v === 'out') return null;
+          const m = members.find(x => String(x.id) === v);
+          return m ? memberName(m) : r.anon ? `${r.sp.label || 'Unlabelled speaker'} (unidentified)` : `${r.sp.label} (guest)`;
+        };
+        const text = () => T.tidy(turns, label => nameOf(rows.find(r => r.sp.label === label)));
+        const say = () => {
+          const n = T.tokens(text()), c = T.cost(model.value, n);
+          price.textContent = n ? `About ${Math.max(1, Math.round(n / 1000)).toLocaleString()}k tokens to read. On ${T.MODELS.find(m => m.id === model.value).label} this draft will cost your Anthropic account about ${c < 0.015 ? 'a cent or two' : `$${c.toFixed(2)}`}, and takes a minute or three.` : 'Everyone is left out, so there is nothing to read.';
+          go.disabled = !n || !agreed.checked || !key;
+        };
+        const go = btn('Draft the session', () => {
+          txKeep({ model: model.value, speakers: { ...(kept.speakers || {}), ...Object.fromEntries(rows.filter(r => !r.anon).map(r => [r.sp.label, r.sel.value])) } });
+          const cast = [...new Set(rows.map(nameOf).filter(Boolean))].map(n => {
+            const r = rows.find(x => nameOf(x) === n), m = members.find(x => String(x.id) === r.sel.value);
+            return m ? (m.role === 'gm' ? `${n}: the game master, who narrates and speaks for the other characters`
+              : m.character_name && m.character_name !== m.display_name ? `${n}: a player, whose character is ${m.character_name}` : `${n}: a player`)
+              : r.anon ? `${n}: unidentified; work out who from what they say` : `${n}: someone not in the campaign's member list`;
+          });
+          run(text(), cast, model.value, '');
+        }, 'primary');
+        [model, agreed, ...rows.map(r => r.sel)].forEach(x => x.addEventListener('change', say));
+        const words = turns.reduce((t, x) => t + x.text.split(/\s+/).length, 0);
+        show(heading('Who is speaking?'),
+          el('p', { class: 'small muted' }, `${fileName ? `${fileName}: ` : ''}${words.toLocaleString()} words from ${found.length === 1 ? '1 speaker' : `${found.length} speakers`}. Say who each one is, so Claude knows which character they play. Names from the file are remembered in this browser for next time.`),
+          found.length === 1 && T.anonymous(found[0].label) ? el('p', { class: 'tx-note small' }, 'This transcript doesn\'t say who is speaking, so Claude will work it out from what is said. Check the draft a little more closely.') : null,
+          el('div', { class: 'tx-list' }, rows.map(r => r.row)),
+          field('Model', model, 'Sonnet is a good writer at a low price. Opus writes a little better for about twice as much, and Haiku costs about a cent.'),
+          el('label', { class: 'inline tx-agree' }, agreed, ' Everyone at the table knows this recording is being sent to Anthropic to draft the session.'),
+          price,
+          key ? null : el('p', { class: 'tx-note small' }, el('a', { href: '#/account', onclick: () => d.close() }, 'Add your Anthropic API key on your account page'), ' to draft.'),
+          actions(go, btn('Back', () => pick()), cancel()));
+        say();
+      }
+
+      // --- step 3: the draft being written
+      let last = null;   // { transcript, cast, model }: what a redraft sends again
+      async function run(transcript, cast, model, again) {
+        last = { transcript, cast, model };
+        const said = el('p', { class: 'small', role: 'status' }, 'Sending the transcript to Anthropic…');
+        const bar = el('progress', { 'aria-label': 'Drafting' });
+        show(heading('Drafting the session'),
+          el('p', { class: 'small muted' }, 'Claude is reading the transcript with your own Anthropic API key. A full night takes a minute or three: keep this window open.'),
+          bar, said, actions(cancel()));
+        abort = new AbortController();
+        try {
+          // the session before this one, for continuity, and the campaign's names, so misheard ones are spelt right
+          const prev = (sessions || []).filter(x => x.number < s.number).sort((a, b) => b.number - a.number)[0];
+          const before = prev ? await api('session', { query: { cid: S.camp.id, id: prev.id } }).then(r => new DOMParser().parseFromString(String(r.session.summary || ''), 'text/html').body.textContent.trim().slice(0, 6000), () => '') : '';
+          const names = (S.encyclopedia || []).flatMap(e => [e.name, ...(e.aliases || [])]).filter(Boolean).slice(0, 1500);
+          const c = cal(), slots = E.timeMode(c) === 'hours' ? [] : E.shiftNames(c);
+          const ctxt = { campaign: S.camp.name, about: String(S.camp.description || '').slice(0, 2000), cast, names, slots, before, notes: String(notes() || '').slice(0, 20000) };
+          const { draft, usage } = await T.draft(key, model, ctxt, transcript, { again, signal: abort.signal, onProgress: t => { said.textContent = t; } });
+          if (!closed) review(draft, usage);
+        } catch (err) {
+          if (closed) return;
+          bar.remove(); said.classList.add('bad'); said.textContent = err.message;
+          d.querySelector('.kit-dialog-actions').replaceChildren(btn('Try again', () => run(transcript, cast, model, again), 'primary'), btn('Back', () => who()), cancel());
+        }
+      }
+
+      // --- step 4: the GM ticks what to keep
+      function review(draft, usage) {
+        const at = t => (t ? el('small', { class: 'muted tx-at', 'data-tip': 'Where this is in the transcript (hours:minutes)' }, t) : el('small', { class: 'tx-at' }));
+        const tick = (label, on = true) => el('input', { type: 'checkbox', checked: on, 'aria-label': label });
+        const jumpOk = t => Sessions.parseJump(cal(), t, sessionStart(s), nowShift()) !== null;
+        const part = (title, items, row, open = true, note = '') => {
+          if (!items.length) return null;
+          const rows = items.map(row);
+          const count = el('small', { class: 'muted' });
+          const say = () => { const n = rows.filter(r => r.box.checked).length; count.textContent = ` ${n} of ${rows.length} ticked`; };
+          rows.forEach(r => r.box.addEventListener('change', say));
+          say();
+          const all = on => btn(on ? 'All' : 'None', () => { rows.forEach(r => { r.box.checked = on; }); say(); }, 'link small', `Tick ${on ? 'every one' : 'none'} of these`);
+          const node = el('details', { class: 'tx-part', open }, el('summary', {}, el('strong', {}, title), count),
+            note ? el('p', { class: 'small muted' }, note) : null,
+            el('div', { class: 'row tx-all' }, all(true), all(false)),
+            el('div', { class: 'tx-rows' }, rows.map(r => r.row)));
+          return { node, picked: () => rows.filter(r => r.box.checked).map(r => r.item) };
+        };
+        const noteKind = t => ({ '!': 'aside', '?': 'loose end', '$': 'GM only', '>': 'time jump' })[t[0]] || '';
+        const notesPart = part('Notes', draft.notes, n => {
+          const bad = n.text[0] === '>' && !jumpOk(n.text);
+          const box = tick(n.text, !bad);
+          const kind = bad ? 'a jump this calendar can\'t read: left out' : noteKind(n.text);
+          return { item: n, box, row: el('label', { class: `tx-row${n.indent ? ' tx-indent' : ''}` }, box, at(n.at), el('span', {}, n.text, kind ? el('small', { class: 'chip tx-kind' }, kind) : null)) };
+        }, true, 'Added to the end of your notes box, in its own shorthand.');
+        const sumPart = part('Summary', draft.summary, p => {
+          const box = tick(p.text.slice(0, 60));
+          return { item: p, box, row: el('label', { class: 'tx-row tx-para' }, box, el('span', {}, p.text, p.gm_only ? el('small', { class: 'chip tx-kind' }, 'GM only') : null)) };
+        }, true, 'Goes into the summary editor for you to rewrite. Players read it only once you publish the session.');
+        const simple = (title, items) => part(title, items, x => { const box = tick(x); return { item: x, box, row: el('label', { class: 'tx-row tx-para' }, box, el('span', {}, x)) }; });
+        const rewPart = simple('Session rewards', draft.rewards), lootPart = simple('Loot found', draft.loot);
+        const outPart = part('Left out', draft.left_out, x => {
+          const box = tick(x.gist, false);
+          return { item: x, box, row: el('label', { class: 'tx-row' }, box, at(x.at), el('span', {}, x.gist, el('small', { class: 'chip tx-kind' }, x.kind))) };
+        }, false, 'What Claude took to be table talk, rules talk or unclear. Tick one to add it to your notes as an aside.');
+        const guesses = draft.speakers.length ? el('p', { class: 'small muted' }, 'Claude\'s guesses at the unnamed speakers: ', draft.speakers.map(x => `${x.label} is ${x.guess}`).join('; '), '.') : null;
+        const empty = !draft.notes.length && !draft.summary.length;
+        const again = el('input', { maxlength: 500, placeholder: 'For another go: shorter, more about the duel, Kestrel is a she…', 'aria-label': 'What to change in another draft' });
+        const m = T.MODELS.find(x => x.id === last.model);
+        const spent = usage.input ? `This draft read ${usage.input.toLocaleString()} tokens and wrote ${usage.output.toLocaleString()}, about $${Math.max(0.01, ((usage.input - usage.cached) * m.in + usage.cached * m.in * 0.1 + usage.output * m.out) / 1e6).toFixed(2)} on your Anthropic account.` : '';
+        const add = btn('Add to the session', async () => {
+          const paras = sumPart?.picked() || [];
+          let replace = false;
+          if (paras.length && hasSummary()) {
+            const v = await KIT.dialog({ message: 'The summary already has writing in it. Replace it with the draft, or add the draft below it?', buttons: [
+              { value: 'add', label: 'Add below', cls: 'primary', focus: true }, { value: 'replace', label: 'Replace', cls: 'danger' }, { value: '', label: 'Cancel' }] });
+            if (!v) return;
+            replace = v === 'replace';
+          }
+          accept({ title: draft.title, replace,
+            notesText: T.notesText(notesPart?.picked() || [], { ok: jumpOk, extra: outPart?.picked() || [], from: fileName }),
+            summaryHtml: T.summaryHtml(paras), rewardsHtml: T.listHtml(rewPart?.picked() || []), lootHtml: T.listHtml(lootPart?.picked() || []) });
+          d.close();
+          toast('Added. Read it over and change what you like, then Save the summary');
+        }, 'primary', 'Put what is ticked into this session\'s notes box and its summary, rewards and loot editors. The notes save as typing does; the rest waits for your Save');
+        show(heading(empty ? 'Nothing to draft' : draft.title ? `Draft: ${draft.title}` : 'The draft'),
+          el('p', { class: 'small muted' }, empty ? 'Claude found nothing of the game in this transcript.' : 'Untick anything you don\'t want. The time beside a line is where to find it in the transcript.'),
+          guesses,
+          el('div', { class: 'tx-review' }, [notesPart, sumPart, rewPart, lootPart, outPart].filter(Boolean).map(x => x.node)),
+          el('div', { class: 'row tx-again' }, again, btn('Draft again', () => run(last.transcript, last.cast, last.model, again.value.trim() || 'Have another go at it.'), 'small', 'Have Claude write the draft again, with what you typed in mind. It reads the transcript again at about a tenth of the price if you ask within a few minutes')),
+          spent ? el('p', { class: 'small muted' }, spent) : null,
+          actions(empty ? null : add, cancel()));
+      }
+
+      document.body.append(d); d.showModal();
+      pick();
     }
 
     return { viewSessions };
