@@ -1010,10 +1010,10 @@
       });
       const remember = el('input', { type: 'checkbox', name: 'remember', checked: MapScan.apiKey.remembered() });
       const show = () => { state.textContent = !has() ? 'No key saved in this browser.' : MapScan.apiKey.remembered() ? 'A key is saved in this browser.' : 'A key is saved in this browser, until you close this tab or sign out.'; forget.style.display = has() ? '' : 'none'; };
-      scanner = el('form', { class: 'card narrow' }, el('h2', {}, 'Map scanner'),
-        el('p', { class: 'muted' }, 'Scan for names on a map can have Claude read the place names, using your own Anthropic API key, so the scans are billed to your Anthropic account (a few cents each). Create a key at ',
+      scanner = el('form', { class: 'card narrow' }, el('h2', {}, 'Your Anthropic key'),
+        el('p', { class: 'muted' }, 'Two things can have Claude do the reading, using your own Anthropic API key, so they are billed to your Anthropic account: Scan for names on a map (a few cents a scan) and Draft from transcript on a session (about 20 cents a game night). Create a key at ',
           el('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'),
-        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you scan from. When you scan, your browser sends the map\'s picture and the key straight to Anthropic. Signing out removes it.'),
+        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you use it from. When you scan or draft, your browser sends the map\'s picture or the transcript, with the key, straight to Anthropic. Signing out removes it.'),
         field('Anthropic API key', keyIn),
         el('label', { class: 'small' }, remember, ' Remember it on this device. Leave this off on a computer you share: the key then lasts until you close this tab'), state,
         el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save key'), forget));
@@ -7325,6 +7325,8 @@
           ['Scan for names on a map, Read with Claude: only when a GM picks it, their browser sends the map\'s picture to ', extLink({ url: 'https://www.anthropic.com/', title: 'Anthropic' }),
             '\'s API with the GM\'s own API key, and Claude (', (typeof MapScan !== 'undefined' ? MapScan.MODEL : 'claude-opus-5-5'), ') reads the place names on it. Under ',
             extLink({ url: 'https://www.anthropic.com/legal/commercial-terms', title: 'Anthropic\'s commercial terms' }), ' the names it returns belong to the GM. The GM approves each one before it is pinned.'],
+          ['Draft from transcript on a session: only when a GM picks it, their browser sends the transcript they chose, the names of the people in it and of the campaign\'s Encyclopedia entries, the summary of the session before and their own notes to ', extLink({ url: 'https://www.anthropic.com/', title: 'Anthropic' }),
+            '\'s API with the GM\'s own API key, and Claude (the model the GM picks: ', (typeof Transcript !== 'undefined' ? Transcript.MODELS.map(m => m.id).join(', ') : 'claude-sonnet-5-5'), ') drafts the session\'s notes and summary. The transcript comes from the GM\'s own recording tool; it is never uploaded to this site or kept. The GM ticks what to keep before any of it is added.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['The 3D dice on the die roller: ', cite('three'), '. The dice shapes, the numbers on them and the dice patterns (marble, wood, stone and the rest) are drawn in your browser by this app; no picture files are used.'],
           ['The idea for the dice skins (Paladin, Warlock, Druid, Fire, Lava, Shield, Leopard and Pink pinstripe): ', cite('diceSkins'), '. Only the ideas are borrowed; the skins are drawn by this app, and none of the mod\'s files or pictures are used.'],

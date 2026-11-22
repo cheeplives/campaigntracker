@@ -288,7 +288,7 @@ test("Scan for names: with no key, Read with Claude points to the account page, 
   await expect(d.getByRole("button", { name: "Read with Claude" })).toHaveCount(0);
   await d.getByRole("link", { name: "Add your key" }).click();
   await expect(page).toHaveURL(/#\/account$/);
-  const card = page.locator("form.card", { has: page.getByRole("heading", { name: "Map scanner" }) });
+  const card = page.locator("form.card", { has: page.getByRole("heading", { name: "Your Anthropic key" }) });
   await expect(card.getByRole("status")).toHaveText("No key saved in this browser.");
   await expect(card.getByRole("button", { name: "Remove key" })).toBeHidden();
   await card.getByLabel("Anthropic API key").fill("not a key");
