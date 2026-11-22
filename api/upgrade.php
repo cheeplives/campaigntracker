@@ -149,6 +149,8 @@ function upgrade_steps(): array {
             'A campaign can now post to a Discord channel when time passes, an event is added, a clock fills or a session ends (At the Table → Use in a VTT or on stream).'],
         ['055_reminder_repeat.sql', fn(PDO $p) => db_has_table($p, 'reminders') && !db_has_column($p, 'reminders', 'repeat_every'),
             'Reminders can now repeat every shift until dismissed, and be marked done.'],
+        ['056_character_layouts.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'layout'),
+            'A character sheet now keeps its own copy of its template, so a change to a template waits for the sheet\'s player or a GM to take it.'],
     ];
 }
 

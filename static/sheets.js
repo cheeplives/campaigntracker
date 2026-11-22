@@ -1338,7 +1338,14 @@ const Sheets = (() => {
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         summaryLine(ch))),
         portraits,
-        r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
+        // a sheet keeps its own copy of its template: a change waits here until its player or a GM takes it
+        r.template_changed ? el('div', { class: 'notice row spread template-changed' },
+          el('span', {}, `${ch.template.name} has changed since this sheet last took it. This sheet stays as it is until you update it.`),
+          button('Update to the new template', async () => {
+            if (!await confirmDialog(`Update ${ch.name}'s sheet to the template as it is now? Anything filled in that no longer fits moves under Old fields, and what you hid stays hidden.`, { ok: 'Update' })) return;
+            try { await ctx.post('character_template_update', { id: ch.id }, cid()); toast('The sheet is on the new template'); renderCharacter(id, play); }
+            catch (err) { toast(err.message, true); }
+          }, 'small')) : null,
         bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded
     startPresence(ch, {

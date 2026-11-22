@@ -908,7 +908,8 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   on_map TINYINT(1) NOT NULL DEFAULT 1,              -- its token shows around its group's marker when the group shows tokens (049)
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
   portrait_id INT UNSIGNED NULL,                    -- its portrait (043): one of its entry's pictures (attachments.id); NULL: the entry's first picture
-  template_version INT UNSIGNED NOT NULL,
+  template_version INT UNSIGNED NOT NULL,           -- the template version its layout was copied from
+  layout MEDIUMTEXT NULL,                            -- its own copy of the template's layout (056), so a template change waits for its player or GM; NULL: the template's
   field_values MEDIUMTEXT NOT NULL,
   field_stamps MEDIUMTEXT NOT NULL,
   hidden TEXT NOT NULL,

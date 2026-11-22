@@ -1100,6 +1100,7 @@ try {
     case 'characters':
     case 'character':
     case 'character_create':
+    case 'character_template_update':
     case 'character_field':
     case 'character_values':
     case 'character_save':

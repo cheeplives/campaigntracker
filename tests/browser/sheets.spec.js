@@ -290,16 +290,64 @@ test("Characters: a template change moves a value that no longer fits to old fie
   await api(p1, "character_field", { id: c.id, key: "str", value: 12 }, cid);
   const changed = LAYOUT(); changed.sections[0].fields[0].type = "counter";
   expect((await api(gm, "template_save", { id: tpl.id, name: tpl.name, game: "Test RPG", layout: changed, version: tpl.version })).status).toBe(200);
+  // the template's author is this campaign's GM, so its sheets take the change at once
   const s = (await sheet(p1, cid, c.id)).json;
-  expect(s.template_changed).toBe(true);
+  expect(s.template_changed).toBe(false);
   expect(s.character.old).toEqual([{ key: "str", value: 12 }]);
   expect(s.character.values).toEqual({});
-  expect((await sheet(p1, cid, c.id)).json.template_changed).toBe(false); // seen now
   // filling in the field again keeps the old value among the old fields
   expect((await api(p1, "character_field", { id: c.id, key: "str", value: { cur: 3, max: 5 } }, cid)).status).toBe(200);
   const again = (await sheet(p1, cid, c.id)).json.character;
   expect(again.values).toEqual({ str: { cur: 3, max: 5 } });
   expect(again.old.map(o => o.value)).toEqual([12]);
+});
+
+test("Characters: a template changed by someone who doesn't run the sheet waits for its player or GM, and what was hidden stays hidden", async ({ page, browser }) => {
+  const { cid, gm, p1, p2 } = await party(page, browser);
+  // a player wrote the group's template; the GM and another player use it
+  const tpl = (await api(p2, "template_save", { name: `By a player ${Date.now()}`, game: "Test RPG", layout: LAYOUT() })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Wren" });
+  await api(p1, "character_field", { id: c.id, key: "past", value: "Owes the guild" }, cid);
+  await api(p1, "character_field", { id: c.id, key: "str", value: 9 }, cid);
+  expect((await api(p1, "character_save", { id: c.id, version: c.version, hidden: ["background"] }, cid)).status).toBe(200);
+  const own = await make(p2, cid, { template_id: tpl.id, name: "Author's own" });
+  // the author moves the hidden section's field into a section nobody hid, and retypes another field
+  const moved = { sections: [{ key: "stats", title: "Stats", fields: [{ key: "str", label: "Strength", type: "counter" }, { key: "hp", label: "HP", type: "counter", play: true }, { key: "past", label: "Past", type: "longtext" }] }] };
+  expect((await api(p2, "template_save", { id: tpl.id, name: tpl.name, game: "Test RPG", layout: moved, version: tpl.version })).status).toBe(200);
+  // the sheet is as it was: nothing shown that was hidden, nothing blanked
+  const seen = await sheet(p2, cid, c.id);
+  expect(JSON.stringify(seen.json)).not.toContain("guild");
+  expect(seen.json.character.values).toEqual({ str: 9 });
+  expect(seen.json.character.layout.sections.map(x => x.key)).toEqual(["stats"]);
+  expect(seen.json.template_changed).toBe(false);   // only its player and GMs are told
+  const mine = (await sheet(p1, cid, c.id)).json;
+  expect(mine.template_changed).toBe(true);
+  expect(mine.character.values).toEqual({ str: 9, past: "Owes the guild" });
+  expect(mine.character.layout.sections.map(x => x.key)).toEqual(["stats", "background"]);
+  // the author's own sheet took the change at once
+  expect((await sheet(p2, cid, own.id)).json.character.layout.sections.map(x => x.key)).toEqual(["stats"]);
+  // someone who can't change the sheet can't move it onto the new template
+  expect((await api(p2, "character_template_update", { id: c.id }, cid)).status).toBe(403);
+  // its player takes the change: the moved field is still hidden, and the retyped one is among the old fields
+  const up = await api(p1, "character_template_update", { id: c.id }, cid);
+  expect(up.status).toBe(200);
+  expect(up.json.template_changed).toBe(false);
+  expect(up.json.character.hidden).toEqual(expect.arrayContaining(["background", "past"]));
+  expect(up.json.character.old).toEqual([{ key: "str", value: 9 }]);
+  expect(up.json.character.values.past).toBe("Owes the guild");
+  const after = await sheet(p2, cid, c.id);
+  expect(JSON.stringify(after.json)).not.toContain("guild");
+  expect(after.json.character.layout.sections[0].fields.map(f => f.key)).toEqual(["str", "hp"]);
+});
+
+test("Characters: an unlisted template nobody showed you can't be used for a sheet", async ({ page, browser }) => {
+  const { cid, p1 } = await party(page, browser);
+  const stranger = await (await newContext(browser)).newPage();
+  const who = person("Stray");
+  await signIn(stranger, who);
+  await approve(browser, who.email);
+  const priv = (await api(stranger, "template_save", { name: `Private ${Date.now()}`, game: "Test RPG", layout: LAYOUT(), is_listed: false })).json.template;
+  expect((await api(p1, "character_create", { template_id: priv.id, name: "Peeker" }, cid)).status).toBe(404);
 });
 
 test("Characters: a removed member's sheets stay, for the GM to edit and hand on", async ({ page, browser }) => {

@@ -214,6 +214,8 @@ function templates_action(string $action): void {
                 $st = db()->prepare('UPDATE sheet_templates SET name=?, game=?, edition=?, layout=?, is_listed=?, version=version+1 WHERE id=? AND version=?');
                 $st->execute([$name, $game, $edition, $layout, $listed, $id, int_in(p('version'), 1)]);
                 if (!$st->rowCount()) fail('This template was saved by someone else after you opened it. Reload it and make your change again', 409, 'stale');
+                // the sheets its author plays, or runs as a GM, follow it at once; anyone else's wait for their player or GM to take the change
+                characters_take_template("c.template_id=? AND (c.owner_id=? OR EXISTS (SELECT 1 FROM campaign_members m WHERE m.campaign_id=c.campaign_id AND m.user_id=? AND m.role='gm'))", [$id, $me['id'], $me['id']]);
             } else {
                 db()->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, layout, is_listed) VALUES (?,?,?,?,?,?)')
                     ->execute([$name, $game, $edition, $me['id'], $layout, p('is_listed') === false ? 0 : 1]);
@@ -356,7 +358,7 @@ function character_row(int $cid, int $id, bool $isGm): array {
 }
 /** The characters of campaign $cid this member can see (players don't see those of GM-only entries), or just $id. */
 function character_rows(int $cid, bool $isGm, ?int $id = null): array {
-    $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
+    $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, COALESCE(c.layout, t.layout) AS layout, t.version AS tversion,
             ' . user_name_sql() . ' AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign, m.role AS owner_role,
             pa.id AS portrait_file, pa.is_secret AS portrait_secret, pa.frame_x, pa.frame_y, pa.frame_zoom
         FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
@@ -523,10 +525,11 @@ function characters_action(string $action, int $cid): void {
 
         case 'character':
             $c = character_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
-            out(character_out($c, $isGm, true));
+            out(character_out($c, $isGm));
 
         case 'character_create':
             $t = template_row(int_in(p('template_id'), 1));
+            need_template_visible($t);
             $kind = p('kind', 'pc');
             if (!in_array($kind, ['pc', 'npc'], true)) fail('A character is a PC or an NPC');
             if (!$isGm && ($kind !== 'pc' || p('party') || (p('owner_id') !== null && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
@@ -556,8 +559,8 @@ function characters_action(string $action, int $cid): void {
                 $entry = (int)$pdo->lastInsertId();
                 $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
             }
-            $pdo->prepare("INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, kind, party_group_id, sheet_public, template_version, field_values, field_stamps, hidden)
-                VALUES (?,?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $party, $kind === 'pc' ? 1 : 0, $t['version']]);
+            $pdo->prepare("INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, kind, party_group_id, sheet_public, template_version, layout, field_values, field_stamps, hidden)
+                VALUES (?,?,?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $party, $kind === 'pc' ? 1 : 0, $t['version'], template_layout_json((int)$t['id'])]);
             $id = (int)$pdo->lastInsertId();
             character_kind_tag($cid, $entry, $kind);
             // a player's first character is the one the rest of the app names them by
@@ -565,6 +568,13 @@ function characters_action(string $action, int $cid): void {
             if ($owner !== null && (p('use_entry') || member_role($cid, $owner) === 'player')) character_make_active($cid, $owner, $id);
             $pdo->commit();
             out(['ok' => true, 'character' => character_out(character_row($cid, $id, $isGm), $isGm)['character']]);
+
+        case 'character_template_update':
+            // the sheet takes its template as it is now; what no longer fits goes under Old fields, as it always has
+            $c = character_row($cid, int_in(p('id'), 1), $isGm);
+            if (!character_full($c, $isGm)) fail('Only its player or a GM can change this sheet', 403);
+            characters_take_template('c.id=?', [$c['id']]);
+            out(character_out(character_row($cid, (int)$c['id'], $isGm), $isGm));
 
         case 'character_field':
         case 'character_values':
@@ -657,6 +667,8 @@ function characters_action(string $action, int $cid): void {
                 $known = [];
                 foreach (json_decode($c['layout'], true)['sections'] as $s) { $known[$s['key']] = true; foreach ($s['fields'] as $f) $known[$f['key']] = true; }
                 $set[] = 'hidden=?';
+                // a key kept from before a template change stays, so a field the template brings back is still hidden
+                foreach (json_decode($c['hidden'], true) ?: [] as $k) $known[$k] = true;
                 $args[] = json_encode(array_values(array_unique(array_filter($h, fn($k) => is_string($k) && isset($known[$k])))));
             }
             // pip_caps: {field key: how many of its pips this character has, or null for all of them}, merged into what is set
@@ -800,15 +812,48 @@ function characters_action(string $action, int $cid): void {
             out(['ok' => true]);
     }
 }
-/** A character in full as this member may see it, with its values reconciled against its template now. */
-function character_out(array $c, bool $isGm, bool $seen = false): array {
+/** A template's layout as stored. */
+function template_layout_json(int $id): string {
+    $st = db()->prepare('SELECT layout FROM sheet_templates WHERE id=?');
+    $st->execute([$id]);
+    return (string)$st->fetchColumn();
+}
+/** What stays hidden when a sheet moves from layout $old to $new: every key it had, and each field of a hidden section
+ * that now sits in another section (a section hides its fields only while they are in it). */
+function sheet_hidden_carry(array $old, array $new, array $hidden): array {
+    $h = array_fill_keys(array_filter($hidden, 'is_string'), true);
+    $in = [];
+    foreach ($new['sections'] ?? [] as $s) foreach ($s['fields'] as $f) $in[$f['key']] = $s['key'];
+    foreach ($old['sections'] ?? [] as $s) {
+        if (!isset($h[$s['key']])) continue;
+        foreach ($s['fields'] as $f) if (isset($in[$f['key']]) && $in[$f['key']] !== $s['key']) $h[$f['key']] = true;
+    }
+    return array_slice(array_map('strval', array_keys($h)), 0, 1100);
+}
+/** Move characters onto their template's layout as it is now. A sheet keeps its own copy of the layout, so a change to
+ * a template reaches it only here: when its player or a GM asks (character_template_update), or when the template's
+ * author saves it, for the sheets that author plays or runs. $where picks the characters (of sheet_characters c). */
+function characters_take_template(string $where, array $args): int {
+    $st = db()->prepare("SELECT c.id, c.hidden, COALESCE(c.layout, t.layout) AS layout, t.layout AS tlayout, t.version AS tversion
+        FROM sheet_characters c JOIN sheet_templates t ON t.id=c.template_id WHERE $where");
+    $st->execute($args);
+    $up = db()->prepare('UPDATE sheet_characters SET layout=?, template_version=?, hidden=? WHERE id=?');
+    $n = 0;
+    foreach ($st->fetchAll() as $c) {
+        $hidden = sheet_hidden_carry(json_decode($c['layout'], true) ?: [], json_decode($c['tlayout'], true) ?: [], json_decode($c['hidden'], true) ?: []);
+        $up->execute([$c['tlayout'], $c['tversion'], json_encode($hidden), $c['id']]);
+        $n++;
+    }
+    return $n;
+}
+/** A character in full as this member may see it, with its values reconciled against its own copy of its template. */
+function character_out(array $c, bool $isGm): array {
     $full = character_full($c, $isGm);
     $layout = json_decode($c['layout'], true);
     [$values, $old] = sheet_reconcile($layout, json_decode($c['field_values'], true) ?: []);
     $hidden = json_decode($c['hidden'], true) ?: [];
     $card = character_card($c, $isGm, entry_pics((int)$c['campaign_id'], $isGm));
     $changed = (int)$c['template_version'] !== (int)$c['tversion'];
-    if ($seen && $full && $changed) db()->prepare('UPDATE sheet_characters SET template_version=? WHERE id=?')->execute([$c['tversion'], $c['id']]);
     // the rest of the party isn't told which fields and sections are hidden, or that they exist
     if (!$full) foreach ($layout['sections'] as $i => $sec) {
         if (in_array($sec['key'], $hidden, true)) { unset($layout['sections'][$i]); continue; }
