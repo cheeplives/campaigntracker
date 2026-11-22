@@ -1,7 +1,7 @@
 // The About page lists where the built-in figures come from, and anyone can
 // read it from the footer, signed in or not.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, makeCampaign } = require("./helpers");
 
 test("About & sources: open signed out from the footer, with every travel sample cited", async ({ page }) => {
   const errors = watchErrors(page);
@@ -46,5 +46,33 @@ test("About & sources: open signed out from the footer, with every travel sample
   // Leaving the page goes back to the sign-in card.
   await page.goto("index.html#/");
   await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();
+  expectNoErrors(errors);
+});
+
+// The footer is on the left, so the dice button at the bottom right can't cover the link or the build number. Where the
+// footer line lands up and down depends on the page and the window (Josh saw the button over the build number), so this
+// checks it stays clear of the button's column altogether.
+test("About & sources: the dice button never covers the footer on a campaign page", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Fay");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Footer ${gm.id}`);
+  await page.goto(`index.html#/c/${cid}/table`);
+  const fab = page.locator(".dice-fab");
+  await expect(fab).toBeVisible();
+  const foot = page.locator(".footer");
+  const link = foot.getByRole("link", { name: "About & sources" }), version = foot.locator("#version");
+  await expect(link).toBeVisible();
+  await expect(version).toContainText("GM's Almanac build");
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const f = await fab.boundingBox();
+  // nor the table's action bar, which floats over the middle of the foot of the screen
+  const bar = await page.locator(".tv-dock").boundingBox();
+  for (const part of [link, version]) {
+    const b = await part.boundingBox();
+    expect(b.x + b.width).toBeLessThan(f.x);
+    if (bar) expect(b.y + b.height).toBeLessThan(bar.y);
+  }
   expectNoErrors(errors);
 });
