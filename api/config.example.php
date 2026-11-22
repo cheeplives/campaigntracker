@@ -59,6 +59,9 @@ return [
   // Identities here are auto-approved AND flagged admin on first sign-in, so the
   // owner can get in and approve everyone else. Match either the verified email
   // or the "provider:provider_user_id" form (e.g. "github:1432").
+  // An account is a site admin only while it is listed here: take a line out and that account
+  // is an ordinary one from its next request (and can then be revoked on Site Admin). Keep your
+  // own line in, spelled as the email you sign in with, or you lose Site Admin until you put it back.
   'admin_identities' => [
     // 'you@gmail.com',
     // 'github:0000000',

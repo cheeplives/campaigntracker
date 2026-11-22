@@ -13,8 +13,9 @@ A member makes a key in the campaign, under **At the Table → Use in a VTT or o
   can pass time, and a player adds an event only where the GM allows it.
 
 A key acts as the member who made it. It sees exactly what they see in that one campaign, and nothing in their other
-campaigns. It stops working when it is revoked (by its maker, or by any GM of the campaign) or when its maker leaves
-the campaign. The key is shown once. GM's Almanac keeps only its SHA-256 hash.
+campaigns. It stops working when it is revoked (by its maker, on their Account page or in the campaign, or by any GM
+of the campaign), when its maker leaves the campaign, or when it runs out: a key lasts a year unless its maker picks
+30 days, 90 days or no end when making it. The key is shown once. GM's Almanac keeps only its SHA-256 hash.
 
 ## Requests
 
