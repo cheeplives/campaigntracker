@@ -2931,7 +2931,7 @@ button.econ-item:hover { text-decoration: underline; }
 button.econ-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius); }
 .econ-was { display: block; color: var(--dim); font-size: .82rem; font-weight: 400; }
 .econ-shift, .econ-cost { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
-.econ-shift.ended { opacity: .7; }
+.econ-shift.ended, .econ-shift.ended * { color: var(--dim); }
 .econ-shift-acts { margin-top: 0; flex-wrap: nowrap; }
 /* the ledger: the days as headings, then amount, what for, who */
 .econ-day { margin: 12px 0 2px; padding-bottom: 3px; border-bottom: 1px solid var(--line); }
@@ -2958,7 +2958,6 @@ button.econ-item:focus-visible { outline: 2px solid var(--accent); outline-offse
 .econ-ways-wrap { display: flex; flex-direction: column; gap: 10px; }
 .econ-ways-wrap > p { margin: 0; }
 .econ-way.on { border-color: var(--accent); }
-.econ-way:not(.on) > :not(:first-child) { opacity: .6; }
 .econ-lines { display: flex; flex-direction: column; gap: 6px; }
 .econ-line { display: grid; gap: 6px; align-items: center; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 32px; }
 .econ-line.cols-3 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 32px; }
