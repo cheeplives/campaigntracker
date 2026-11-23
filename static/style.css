@@ -2904,9 +2904,9 @@ dialog.tour.no-target { background: rgb(0 0 0 / .55); }
 .econ-page { display: flex; flex-direction: column; gap: 14px; }
 .econ-two { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .econ-half { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-@media (max-width: 1000px) { .econ-two { grid-template-columns: 1fr; } }
-@media (max-width: 700px) { .econ-half { grid-template-columns: 1fr; } }
-.econ-page .card { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 1000px) { .econ-two { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .econ-half { grid-template-columns: minmax(0, 1fr); } }
+.econ-page .card { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .econ-page .card h3, .econ-page h2 { margin: 0; }
 .econ-page .card p { margin: 0; }
 .econ-n { font: 400 .9rem var(--body); color: var(--dim); }
