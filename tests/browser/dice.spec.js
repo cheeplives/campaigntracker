@@ -210,7 +210,7 @@ test("explosions and criticals: the GM turns on doubles exploding and critting, 
   await openDice(page);
   await expect(page.locator(".dice-sys-n")).toHaveText("2d6!m2");
   await page.locator(".dice-more summary").click();
-  await expect(page.getByRole("combobox", { name: "Critical success" })).toHaveValue("doubles");
+  await expect(page.locator(".dice-panel").getByRole("combobox", { name: "Critical success" })).toHaveValue("doubles");
   await page.locator(".dice-sys-go").click();
   await expect(page.locator(".dice-e.latest .dice-e-out b")).not.toHaveText("?");
   const roll = (await api(page, "dice_rolls", undefined, cid)).json.rolls.at(-1);
