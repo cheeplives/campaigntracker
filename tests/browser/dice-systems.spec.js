@@ -287,3 +287,59 @@ test("criticals in the game roll: on the top face, a 1, exactly the target, or d
   expect(o.crit).toBeCloseTo(5 / 36, 1);
   expect(o.botch).toBeCloseTo(1 / 36, 1);
 });
+
+test("each game's own criticals and fumbles", () => {
+  const preset = id => DS.PRESETS.find(g => g.id === id);
+  const game = (id, r, more = {}) => { const g = preset(id); const sys = DS.BY_ID[g.system]; return DS.reading(sys, r, DS.params(sys, g.params, more), {}); };
+  // Cyberpunk RED: a natural 10 rolls one more d10 and adds it, a natural 1 one more and takes it away; else it isn't used
+  expect(DS.BY_ID.d20.build(DS.params(DS.BY_ID.d20, preset("cpred").params, { mod: 7 }))).toBe("1d10+1d10+7");
+  expect(game("cpred", fake([[10], [6]], 7))).toMatchObject({ big: 23, tier: "crit", words: "Critical success" });
+  expect(game("cpred", fake([[1], [6]], 12))).toMatchObject({ big: 7, tier: "botch", words: "Critical failure" });
+  const plainRoll = fake([[8], [6]], 7);
+  expect(game("cpred", plainRoll)).toMatchObject({ big: 15, tier: "good", words: "Success" });
+  expect(plainRoll.terms[1].dice[0].dropped).toBe(true);
+  expect(game("cpred", fake([[1], [2]], 20))).toMatchObject({ big: 19, tier: "good" });     // a 1 that still makes it
+  // Traveller: Effect 6 or more is exceptional, either way
+  expect(game("traveller", fake([[6, 6]], 2))).toMatchObject({ tier: "crit", words: "Exceptional success" });
+  expect(game("traveller", fake([[1, 1]]))).toMatchObject({ tier: "botch", words: "Exceptional failure" });
+  expect(game("traveller", fake([[4, 5]])).tier).toBe("good");
+  // AGE: doubles on a success give stunt points, as many as the dragon die (the last); on a failure nothing
+  expect(game("age", fake([[4, 4, 5]], 2))).toMatchObject({ tier: "crit", words: "Success, 5 stunt points" });
+  expect(game("age", fake([[2, 2, 1]])).tier).toBe("bad");
+  expect(game("age", fake([[2, 4, 6]])).tier).toBe("good");
+  // Rolemaster: 96+ rolls again and adds; 01–05 rolls again and takes it away
+  const rm = preset("rolemaster");
+  expect(DS.BY_ID.table.build(DS.params(DS.BY_ID.table, rm.params))).toBe("1d100!>=96+1d100!>=96");
+  expect(game("rolemaster", fake([[3], [70]]))).toMatchObject({ big: -67 });
+  const high = fake([[97, { v: 40, extra: true }], [70]]);
+  expect(game("rolemaster", high)).toMatchObject({ big: 137 });
+  expect(high.terms[1].dice[0].dropped).toBe(true);
+  expect(read("table", fake([[2]]), { fumble: 2 })).toMatchObject({ tier: "botch", words: "Fumble" });
+  // Ironsworn: a match on a strong hit is a critical, on a miss a fumble, on a weak hit just a match
+  expect(game("ironsworn", fake([[6], [3, 3]]), { stat: 2 })).toMatchObject({ tier: "crit", words: "Strong hit, a match" });
+  expect(game("ironsworn", fake([[1], [9, 9]]), { stat: 1 }).tier).toBe("botch");
+  expect(read("action", fake([[6], [3, 3]]), { stat: 2 }).tier).toBe("good");             // off unless asked for
+  // Exalted: a botch is no successes and a 1
+  expect(game("exalted", fake([[1, 3, 5]]), { n: 3 }).tier).toBe("botch");
+  // RuneQuest / BRP: a critical a twentieth of the skill, a special a fifth, a fumble the top twentieth of the failure
+  expect(game("brp", fake([[3]]), { skill: 60 })).toMatchObject({ tier: "crit", words: "Critical success" });
+  expect(game("brp", fake([[12]]), { skill: 60 })).toMatchObject({ tier: "good", words: "Special success" });
+  expect(game("brp", fake([[45]]), { skill: 60 })).toMatchObject({ words: "Success" });
+  expect(game("brp", fake([[99]]), { skill: 60 })).toMatchObject({ tier: "botch", words: "Fumble" });
+  expect(game("brp", fake([[98]]), { skill: 60 })).toMatchObject({ tier: "bad" });
+  expect(game("brp", fake([[4]]), { skill: 2 }).words).toBe("Success");                    // 01–05 always succeeds
+  expect(game("brp", fake([[96]]), { skill: 120 }).words).toBe("Failure");                 // 96+ always fails
+  // Delta Green and Unknown Armies: 01 a critical, 100 a fumble, doubles either way
+  expect(game("deltagreen", fake([[1]]), { skill: 40 }).tier).toBe("crit");
+  expect(game("deltagreen", fake([[100]]), { skill: 99 }).tier).toBe("botch");
+  expect(game("deltagreen", fake([[22]]), { skill: 40 }).tier).toBe("crit");
+  expect(game("deltagreen", fake([[55]]), { skill: 40 }).tier).toBe("botch");
+  expect(game("ua", fake([[1]]), { skill: 40 }).tier).toBe("crit");
+  // WFRP: 01–05 always succeeds, 96–100 always fails
+  expect(game("wfrp4", fake([[4]]), { skill: 3 }).words).toMatch(/^Success/);
+  expect(game("wfrp4", fake([[97]]), { skill: 120 }).words).toMatch(/^Failure/);
+  // a campaign saved before a game's newer rule picks it up; what the GM saved still wins
+  expect(DS.campaignSystem({ system: { id: "d20", game: "cpred", params: { die: 10, tn: 15 } } }).p.again).toBe(true);
+  expect(DS.campaignSystem({ system: { id: "d20", game: "cpred", params: { die: 10, again: false } } }).p.again).toBe(false);
+  expect(DS.campaignSystem({ system: { id: "d20", game: null, params: {} } }).p.again).toBe(false);
+});
