@@ -33,7 +33,7 @@ test("a GM sets the economy up: ways to pay, everyday prices, then a price book 
   await page.goto(`index.html#/c/${cid}/table`);
   await goTab(page, "Economy");
   const tabs = await page.locator("nav.tabs a").allTextContents();
-  expect(tabs.indexOf("Economy")).toBe(tabs.indexOf("Encyclopedia") + 1);
+  expect(tabs.indexOf("Economy")).toBe(tabs.indexOf("Library") + 1);
   await expect(page.locator(".econ-empty")).toContainText("Nothing is set up yet");
   // a player is told to wait for the GM, and has no Setup
   await pp.goto(`index.html#/c/${cid}/economy`);

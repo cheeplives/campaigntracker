@@ -37,7 +37,7 @@ piece by piece.
 
 ## Where it lives
 
-A new **Economy** tab in the World group, after Encyclopedia, with four halves: Price book, Ledger, Favours, and
+A new **Economy** tab in the World group, after Library, with four halves: Price book, Ledger, Favours, and
 Setup (GMs only). Party Funds stays on Party → Holdings; the ledger changes the same rows.
 
 ## Who can do what

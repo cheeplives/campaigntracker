@@ -1463,7 +1463,7 @@
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['table', 'At the Table'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions'], ['clocks', 'Clocks']]],
     ['Party', 'Who is in the party and what it owns, its journeys and rests, and where it is right now', [['party', 'Party'], ['travel', 'Travel'], ['downtime', 'Downtime']]],
-    ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['economy', 'Economy'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
+    ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['economy', 'Economy'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
   const TAB_LABELS = Object.fromEntries([...TAB_GROUPS.flatMap(g => g[2]), ['characters', 'Characters'], ['groups', 'Groups'], ['holdings', 'Holdings'], ['search', 'Search'], ['today', 'At the Table']]);

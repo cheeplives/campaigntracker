@@ -27,7 +27,7 @@ async function campaignWithThings(page) {
 }
 
 const TABS = ["table", "calendar", "day/2", "events", "sessions", "clocks", "characters", "groups", "holdings", "travel", "downtime",
-  "encyclopedia", "economy", "economy/ledger", "economy/favours", "economy/setup", "library", "generators", "maps", "regions", "holidays", "members", "tokens", "settings"];
+  "encyclopedia", "library", "economy", "economy/ledger", "economy/favours", "economy/setup", "generators", "maps", "regions", "holidays", "members", "tokens", "settings"];
 
 for (const mode of ["light", "dark"]) {
   test(`axe finds nothing on the main pages in ${mode} mode`, async ({ page }, testInfo) => {
