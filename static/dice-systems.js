@@ -225,7 +225,7 @@
           note: [beat, note].filter(Boolean).join('; ') };
       } },
     // 3
-    { id: 'fudge', group: 'add', name: 'Zero-centred dice (Fudge, plus/minus)', hint: '4dF, d6 − d6',
+    { id: 'fudge', group: 'add', name: 'Zero-centred dice (Fudge, plus/minus)', hint: '4dF, d6 − d6', extras: 'c',
       params: [
         num('skill', 'Skill', 2, -4, 12, { main: true }),
         num('opp', 'Opposition', 2, -4, 14, { main: true }),
@@ -239,7 +239,7 @@
         return { big: sign(r.total) || '0', words, tier: k, note: `${LADDER[r.total] || ''}${LADDER[r.total] ? ', ' : ''}${plural(shifts, 'shift')}` };
       } },
     // 4
-    { id: 'table', group: 'add', name: 'Roll into a result table', hint: 'd100, 2d6, d20',
+    { id: 'table', group: 'add', name: 'Roll into a result table', hint: 'd100, 2d6, d20', extras: 'c',
       params: [
         num('mod', 'Modifier', 0, -100, 200, { main: true }),
         text('dice', 'Dice', '1d100', { help: 'Any free roll, like 2d6 or 1d20' }),
@@ -285,7 +285,7 @@
         return { big: t, words: 'Miss', tier: 'bad' };
       } },
     // 6
-    { id: 'action', group: 'bands', name: 'Action die vs challenge dice', hint: 'd6 + stat vs 2d10',
+    { id: 'action', group: 'bands', name: 'Action die vs challenge dice', hint: 'd6 + stat vs 2d10', extras: 'c',
       params: [
         num('stat', 'Stat', 2, 0, 5, { main: true }),
         num('adds', 'Adds', 0, -5, 10, { main: true }),
@@ -302,7 +302,8 @@
         return { big: action, words: ['Miss', 'Weak hit', 'Strong hit'][beats] + match, tier, note: `vs ${a} and ${b}` };
       } },
     // 7
-    { id: 'duality', group: 'bands', name: 'Two-colour dice', hint: 'Hope d12 + Fear d12',
+    { id: 'duality', group: 'bands', name: 'Two-colour dice', hint: 'Hope d12 + Fear d12', extras: 'c',
+      target: (r, p) => (p.tn ? [r.total, p.tn] : null),
       params: [
         num('mod', 'Modifier', 0, -10, 20, { main: true }),
         num('tn', 'Difficulty', 12, 0, 40, { main: true }),
@@ -400,7 +401,7 @@
         return { big: v, words: v <= target ? 'Success' : 'Failure', tier: v <= target ? 'good' : 'bad', note: `needed ${target} or under` };
       } },
     // 10b
-    { id: 'contest', group: 'under', name: 'Contest: both sides roll d20 under', hint: 'your rating vs a resistance, masteries',
+    { id: 'contest', group: 'under', name: 'Contest: both sides roll d20 under', hint: 'your rating vs a resistance, masteries', extras: 'c',
       params: [
         num('tn', 'Your rating', 15, 1, 100, { main: true, help: 'Over 20 counts masteries: 25 is 5M, 45 is 5M2' }),
         num('mod', 'Bonus or penalty', 0, -60, 60, { main: true, help: 'Augments, benefits and consequences' }),
@@ -423,7 +424,7 @@
     // 11
     { id: 'pool', group: 'pool', name: 'Count successes', hint: 'd10 or d6 pool', extras: 'mc', counts: true,
       params: [
-        num('n', 'Pool', 5, 1, 60, { main: true }),
+        num('n', 'Pool', 5, 0, 60, { main: true, help: '0 rolls one die' }),
         num('t', 'Difficulty', 6, 1, 30, { main: true, help: 'A die this high or higher is a success' }),
         sel('d', 'Die', 10, DIE([10, 6, 8, 12, 20])),
         num('need', 'Successes needed', 1, 1, 20),
@@ -433,10 +434,18 @@
         sel('botch', 'Bad luck', 'none', [['none', 'None'], ['wod', 'Botch: no successes and a 1'], ['glitch', 'Glitch: more than half 1s']]),
         num('auto', 'Automatic successes', 0, 0, 10, { help: 'Willpower and the like' }),
         num('exc', 'Exceptional at this many (0: none)', 0, 0, 20),
+        bool('chance', 'A pool of 0 is a chance die: only its top face succeeds, and a 1 is a dramatic failure', false, { quiet: true }),
       ],
-      build: p => `${p.n}d${p.d}${p.again > 1 ? `!>=${p.again}` : ''}${matches(p, p.n)}>=${p.t}${p.ones ? 'f1' : ''}`,
+      build: p => (p.n === 0 && p.chance ? `1d${p.d}`      // a chance die doesn't roll again
+        : `${Math.max(1, p.n)}d${p.d}${p.again > 1 ? `!>=${p.again}` : ''}${matches(p, p.n)}>=${p.t}${p.ones ? 'f1' : ''}`),
       read: (r, p) => {
         const dice = all(r.terms[0]);
+        if (p.n === 0 && p.chance) {
+          const v = dice[0];
+          if (v === p.d) return { big: 1, words: 'success', tier: 'good', note: 'a chance die' };
+          if (v === 1) { r.terms[0].dice[0].fumble = true; return { big: 0, words: 'Dramatic failure', tier: 'botch', note: 'a chance die' }; }
+          return { big: 0, words: 'successes', tier: 'bad', note: 'a chance die' };
+        }
         const hits = dice.filter(v => v >= p.t).length + (p.dbl > 0 ? dice.filter(v => v >= p.dbl && v >= p.t).length : 0);
         const ones = dice.filter(v => v === 1).length;
         const net = Math.max(0, hits - (p.ones ? ones : 0)) + p.auto;
@@ -449,7 +458,7 @@
         return { big: net, words, tier: glitch && tier !== 'bad' ? 'partial' : tier, note: p.need > 1 ? `needed ${p.need}` : null };
       } },
     // 12
-    { id: 'highest', group: 'pool', name: 'Highest die sets the result', hint: 'd6 pool, 1–3 · 4–5 · 6',
+    { id: 'highest', group: 'pool', name: 'Highest die sets the result', hint: 'd6 pool, 1–3 · 4–5 · 6', extras: 'c',
       params: [
         num('n', 'Dice', 2, 0, 10, { main: true, help: 'With 0 dice, roll 2 and take the lower' }),
         num('dark', 'Dark dice (a dark die highest brings a cost)', 0, 0, 6),
@@ -466,7 +475,7 @@
         return { big: top, words: 'Bad outcome' + cost, tier: 'bad' };
       } },
     // 13
-    { id: 'rolloff', group: 'pool', name: 'Opposed roll-off', hint: 'pool vs pool, highest die wins',
+    { id: 'rolloff', group: 'pool', name: 'Opposed roll-off', hint: 'pool vs pool, highest die wins', extras: 'c',
       params: [
         num('a', 'Your pool', 4, 1, 30, { main: true }),
         num('b', 'Their pool', 4, 1, 30, { main: true }),
@@ -505,7 +514,7 @@
           note: by >= 0 ? `beat ${p.tn} by ${by}` : `missed ${p.tn} by ${-by}` };
       } },
     // 15
-    { id: 'sets', group: 'pool', name: 'Matching sets (width × height)', hint: 'd10 pool',
+    { id: 'sets', group: 'pool', name: 'Matching sets (width × height)', hint: 'd10 pool', extras: 'c',
       params: [
         num('n', 'Dice', 5, 1, 10, { main: true }),
         num('minh', 'Lowest height that counts', 1, 1, 10, { main: true }),
@@ -521,7 +530,7 @@
         return { big: `${best.w}×${best.h}`, words: sets.length > 1 ? `also ${sets.slice(1).map(s => `${s.w}×${s.h}`).join(', ')}` : 'one set', tier: best.w >= 4 ? 'crit' : 'good' };
       } },
     // 16
-    { id: 'symbols', group: 'pool', name: 'Narrative symbol dice', hint: 'success and advantage',
+    { id: 'symbols', group: 'pool', name: 'Narrative symbol dice', hint: 'success and advantage', extras: 'c',
       params: [
         num('ab', 'Ability (d8)', 2, 0, 8, { main: true }),
         num('pr', 'Proficiency (d12)', 0, 0, 8, { main: true }),
@@ -555,7 +564,7 @@
           tier: ok ? (tally.tr ? 'crit' : 'good') : tally.de ? 'botch' : 'bad', faces };
       } },
     // 17
-    { id: 'step', group: 'step', name: 'Step die vs target, with a wild die', hint: 'd4 to d12, aces',
+    { id: 'step', group: 'step', name: 'Step die vs target, with a wild die', hint: 'd4 to d12, aces', extras: 'c',
       params: [
         sel('trait', 'Trait die', 8, DIE([4, 6, 8, 10, 12]), { main: true }),
         num('mod', 'Modifier', 0, -10, 10, { main: true }),
@@ -574,7 +583,7 @@
           note: p.wild ? `trait ${t}, wild ${w}` : null };
       } },
     // 18
-    { id: 'yzstep', group: 'step', name: 'Attribute die + skill die, count successes', hint: 'd6 to d12, 6+ hits, 10+ twice',
+    { id: 'yzstep', group: 'step', name: 'Attribute die + skill die, count successes', hint: 'd6 to d12, 6+ hits, 10+ twice', extras: 'c',
       params: [
         sel('attr', 'Attribute die', 8, DIE([6, 8, 10, 12]), { main: true }),
         sel('skill', 'Skill die', 6, [[0, 'None'], ...DIE([6, 8, 10, 12])], { main: true }),
@@ -589,13 +598,13 @@
         const ammo = p.ammo ? all(r.terms[p.skill ? 2 : 1]) : [];
         const hits = base.reduce((n, v) => n + (p.dbl && v >= p.dbl ? 2 : v >= p.t ? 1 : 0), 0) + ammo.filter(v => v === 6).length;
         const ones = base.filter(v => v === 1).length, ammoOnes = ammo.filter(v => v === 1).length;
-        const tier = hits >= p.need ? (hits >= p.need + 2 ? 'crit' : 'good') : hits > 0 ? 'partial' : 'bad';
+        const tier = hits >= p.need ? 'good' : hits > 0 ? 'partial' : 'bad';   // extra successes buy effects, not a critical
         const n1 = k => (k === 1 ? 'a 1' : `${k} 1s`);
         const notes = [ones ? `${n1(ones)} on the attribute and skill dice` : null, ammoOnes ? `${n1(ammoOnes)} on the ammo dice` : null, p.need > 1 ? `needed ${p.need}` : null].filter(Boolean);
         return { big: hits, words: hits === 1 ? 'success' : 'successes', tier, note: notes.join(', ') || null };
       } },
     // 19
-    { id: 'oracle', group: 'gm', name: 'Oracle: ask a yes-or-no question', hint: 'd100 vs a likelihood',
+    { id: 'oracle', group: 'gm', name: 'Oracle: ask a yes-or-no question', hint: 'd100 vs a likelihood', extras: 'c',
       params: [
         sel('odds', 'Likelihood', 50, [[90, 'Almost certain (90%)'], [75, 'Likely (75%)'], [50, 'Even (50%)'], [25, 'Unlikely (25%)'], [10, 'Small chance (10%)']], { main: true }),
         bool('twist', 'Doubles (11, 22 …) add a twist', true),
@@ -708,7 +717,7 @@
     { id: 'age', name: 'AGE system (Fantasy AGE, Expanse)', system: 'sum', params: { n: 3, sides: 6, tn: 11, stunts: true } },
     { id: 'd6', name: 'D6 System / Star Wars D6', system: 'sum', params: { n: 3, sides: 6, tn: 10, wild: true } },
     { id: 'fate', name: 'Fate Core / Fate Accelerated', system: 'fudge', params: { dice: '4dF' } },
-    { id: 'rolemaster', name: 'Rolemaster / MERP (open-ended d100)', system: 'table', params: { dice: '1d100', open: true, low: true } },
+    { id: 'rolemaster', name: 'Rolemaster / MERP (open-ended d100)', system: 'table', params: { dice: '1d100', open: true, low: true, fumble: 5 } },
     { id: 'pbta', name: 'Powered by the Apocalypse (Apocalypse World, Dungeon World, Masks…)', system: 'pbta', params: {} },
     { id: 'ironsworn', name: 'Ironsworn / Starforged', system: 'action', params: { matches: true } },
     { id: 'daggerheart', name: 'Daggerheart', system: 'duality', params: { sides: 12, first: 'Hope', second: 'Fear' } },
@@ -720,8 +729,8 @@
     { id: 'gurps', name: 'GURPS', system: 'under3d6', params: { n: 3 } },
     { id: 'questworlds', name: 'QuestWorlds', system: 'contest', params: { tn: 15, res: 10 }, labels: { tn: 'Ability rating' } },
     { id: 'cairn', name: 'Into the Odd / Cairn / Black Hack saves', system: 'under20', params: { nat: true } },
-    { id: 'v20', name: 'Vampire: The Masquerade 20th anniversary / classic World of Darkness', system: 'pool', params: { d: 10, t: 6, ones: true, botch: 'wod' }, labels: { t: 'Difficulty', n: 'Dice pool' } },
-    { id: 'cofd', name: 'Chronicles of Darkness', system: 'pool', params: { d: 10, t: 8, again: 10, exc: 5 } },
+    { id: 'v20', name: 'Vampire: The Masquerade 20th anniversary / classic World of Darkness', system: 'pool', params: { d: 10, t: 6, ones: true, botch: 'wod', exc: 5 }, labels: { t: 'Difficulty', n: 'Dice pool' } },
+    { id: 'cofd', name: 'Chronicles of Darkness', system: 'pool', params: { d: 10, t: 8, again: 10, exc: 5, chance: true } },
     { id: 'exalted', name: 'Exalted', system: 'pool', params: { d: 10, t: 7, dbl: 10, botch: 'wod' } },
     { id: 'sr5', name: 'Shadowrun 5th edition', system: 'pool', params: { d: 6, t: 5, botch: 'glitch' }, labels: { n: 'Dice pool', need: 'Threshold' } },
     { id: 'yze', name: 'Year Zero Engine (Mutant, Alien, Forbidden Lands…)', system: 'pool', params: { d: 6, t: 6 } },
