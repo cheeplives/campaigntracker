@@ -155,6 +155,8 @@ function upgrade_steps(): array {
             'An invitation to a campaign now lasts 14 days (inviting the address again starts it over), and one waiting from before lasts 14 days from now.'],
         ['058_key_expiry.sql', fn(PDO $p) => db_has_table($p, 'connection_keys') && !db_has_column($p, 'connection_keys', 'expires_at'),
             'A new API key now lasts a year unless you pick otherwise, and your Account page lists every panel link and API key you have. Keys made before this stay until revoked.'],
+        ['059_economy.sql', fn(PDO $p) => !db_has_table($p, 'economy_wealth'),
+            'Added the Economy tab: a price book in coins, barter, wealth or favours, prices that shift by region, a ledger of what the party gained and spent, regular costs, and favours owed.'],
     ];
 }
 

@@ -10,7 +10,7 @@ test("every row of buttons and boxes on the main pages is one height, its button
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, "Button sizes");
-  const pages = ["#/templates", "#/", "#/account", ...["", "calendar", "events", "events/reminders", "sessions", "clocks", "party", "groups",
+  const pages = ["#/templates", "#/", "#/account", ...["", "calendar", "events", "events/reminders", "sessions", "clocks", "economy", "economy/setup", "party", "groups",
     "characters", "holdings", "travel", "downtime", "encyclopedia", "library", "generators", "maps", "members", "settings",
     "settings/calendar", "settings/dice", "settings/encyclopedia", "settings/weather", "settings/tools"].map(p => `#/c/${cid}/${p}`)];
   const mixed = [];

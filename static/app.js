@@ -1463,7 +1463,7 @@
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['table', 'At the Table'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions'], ['clocks', 'Clocks']]],
     ['Party', 'Who is in the party and what it owns, its journeys and rests, and where it is right now', [['party', 'Party'], ['travel', 'Travel'], ['downtime', 'Downtime']]],
-    ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
+    ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['economy', 'Economy'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
   const TAB_LABELS = Object.fromEntries([...TAB_GROUPS.flatMap(g => g[2]), ['characters', 'Characters'], ['groups', 'Groups'], ['holdings', 'Holdings'], ['search', 'Search'], ['today', 'At the Table']]);
@@ -1480,6 +1480,7 @@
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
     encyclopedia: 'The people, places, items and groups met in play, linked wherever their names are written',
+    economy: 'What things cost in coins, barter, wealth or favours, where the party is; what the party gained and spent; and who owes whom',
     library: 'The campaign\'s books, journals and notes, written out in full. Anyone can add or change one',
     generators: 'Random names, taverns, companies, towns and encounters, to use on the spot or add to the Encyclopedia',
     regions: 'Places with their own climate, light source and terrain',
@@ -1898,6 +1899,12 @@
       tabIntro('clocks', 'Circles of segments that fill as something comes closer: the GM\'s plots and dangers, and the players\' own plans.'),
       mainAction('Add a clock', 'Give it a name and a number of segments, then fill them in as things move on.'),
       { at: '#app .clock-tag-gm, #app .clock-tag-player', optional: true, title: 'Whose clocks', text: 'Show the GM\'s clocks, the players\' clocks, or both. A GM\'s clock can be kept secret from the players.' },
+    ],
+    economy: () => [
+      tabIntro('economy', 'How this campaign pays for things, and what that comes to: a price book, the party\'s ledger, and the favours it owes and is owed.'),
+      { at: '#app nav.subtabs', optional: true, title: 'Four halves', text: 'Price book: what things cost where the party is. Ledger: what the party gained and spent, day by day. Favours: who owes whom. Setup: the ways to pay, for GMs.' },
+      { at: '#app .econ-shifts', optional: true, title: 'Shifts', text: 'A shift changes prices or how easy things are to find in a region for a while: a famine, a blockade, a glut.' },
+      { at: '#app .econ-afford', optional: true, title: 'Can the party afford it?', text: 'Pick an item to check its price against the party\'s coins, trade goods and each character\'s wealth, and pay for it from here.' },
     ],
     characters: () => [
       tabIntro('characters', 'Everyone\'s characters and their sheets, the players\' and the GM\'s.'),
@@ -7316,6 +7323,10 @@
           'This app\'s QuestWorlds roll and template are licensed under the ', extLink({ url: 'https://www.chaosium.com/orclicense', title: 'ORC License' }),
           ' held in the Library of Congress at TX 9-307-067. All warranties are disclaimed as set forth therein. QuestWorlds © copyright 2019–2023 Moon Design Publications LLC. ',
           'No rules text, artwork, logos or trade dress are copied; Chaosium\'s trademarks are Reserved Material under the licence and are only named. Not affiliated with or endorsed by Chaosium or Moon Design.')),
+      section('Economy',
+        p('The Economy tab ships no prices and no currency: every coin, trade good, wealth level and price is typed in or uploaded by the campaign\'s GM, and stays that campaign\'s own. ',
+          'The everyday items Setup asks a price for first ("Private lodging, 1 night", "Fine meal for 1" and the rest) are a list written for this app, taken from no published game. ',
+          'The four ways to pay (coins, barter, a wealth level, favours in three sizes), price shifts by region and the ledger are this app\'s own design.')),
       section('Software and fonts',
         list([
           ['The notes editor: ', cite('quill'), '.'],
@@ -8199,6 +8210,7 @@
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
   ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));
+  const { viewEconomy } = EconomyTab.make(tabCtx);
   // The die roller (static/dice-tab.js): not in panel.html, which has no 🎲 button.
   const { diceSync, diceNotice, diceFromSheet } = !PANEL && typeof DiceTab !== 'undefined' ? DiceTab.make(tabCtx) : { diceSync: () => {}, diceNotice: () => {}, diceFromSheet: null };
   // The Report (!) button and Site Admin's Reports tab (static/report.js; the At the Table panel doesn't load it)
@@ -8287,6 +8299,7 @@
         else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'sessions') await viewSessions(parts[3]);
         else if (tab === 'clocks') await viewClocks();
+        else if (tab === 'economy') await viewEconomy(parts[3] || '');
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'characters' && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));

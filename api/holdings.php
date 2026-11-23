@@ -181,8 +181,9 @@ function holdings_action(string $action): void {
         $a = round((float)$a, 2);
         if (p('id')) {
             $id = int_in(p('id'), 1);
-            holding_row('party_funds', $id, $cid, $owner);
+            $old = holding_row('party_funds', $id, $cid, $owner);
             db()->prepare('UPDATE party_funds SET currency=?, location=?, amount=? WHERE id=?')->execute([$currency, $location, $a, $id]);
+            econ_log_funds($cid, $old, $a);   // the Economy tab's ledger notes a party amount changed by hand (api/economy.php)
             out(['ok' => true, 'id' => $id]);
         }
         db()->prepare('INSERT INTO party_funds (campaign_id, character_id, currency, location, amount, created_by) VALUES (?,?,?,?,?,?)')->execute([$cid, $owner, $currency, $location, $a, me()['id']]);
