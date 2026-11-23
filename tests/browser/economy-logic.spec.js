@@ -3,8 +3,7 @@
 // book read from and written to a CSV file.
 const { test, expect } = require("@playwright/test");
 const path = require("path");
-require(path.join(__dirname, "..", "..", "static", "economy.js"));
-const Economy = globalThis.Economy;
+const Economy = require(path.join(__dirname, "..", "..", "static", "economy.js"));
 
 /** A campaign with three coins (a Gold crown is 10 Silver marks, a mark is 10 bits), barter in Day's food, and wealth. */
 const CONFIG = {

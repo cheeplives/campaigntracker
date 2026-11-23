@@ -243,6 +243,8 @@
     return [head.join(','), ...lines].join('\r\n') + '\r\n';
   }
 
-  root.Economy = { AVAIL, SIZES, availLabel, sizeLabel, fmtNum, parseNum, coinUnits, fmtCoins, coinNamed, parseCoins, partyCoins, tradeGoods, partyGoods, fmtBarter,
+  const Economy = { AVAIL, SIZES, availLabel, sizeLabel, fmtNum, parseNum, coinUnits, fmtCoins, coinNamed, parseCoins, partyCoins, tradeGoods, partyGoods, fmtBarter,
     shiftApplies, priceIn, shiftWords, parseCSV, itemsFromRows, itemsToCSV };
+  if (typeof module !== 'undefined' && module.exports) module.exports = Economy;
+  else root.Economy = Economy;
 })(typeof window !== 'undefined' ? window : globalThis);
