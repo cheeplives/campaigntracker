@@ -291,7 +291,9 @@
     function diceSystemCard(saved) {
       const DS = window.DiceSystems, DiceUI = window.DiceUI, Dice = window.Dice;
       const cur = { game: saved?.id ? (saved.game || 'custom') : '', id: saved?.id && DS.BY_ID[saved.id] ? saved.id : 'd20', table: saved?.table || '', labels: saved?.labels || {} };
-      cur.p = DS.params(DS.BY_ID[cur.id], saved?.id === cur.id ? saved.params : null);
+      // a game's numbers added since this was saved (a newer rule) come from its preset; what was saved wins
+      const savedGame = DS.PRESETS.find(g => g.id === cur.game && g.system === cur.id);
+      cur.p = DS.params(DS.BY_ID[cur.id], savedGame?.params, saved?.id === cur.id ? saved.params : null);
       const opt = (v, l) => el('option', { value: v, selected: v === cur.game }, l);
       const gameSel = el('select', { id: 'dice-game' }, opt('', 'Free dice only (no game roll)'),
         el('optgroup', { label: 'Games' }, DS.PRESETS.map(g => opt(g.id, g.name))),

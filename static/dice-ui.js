@@ -80,6 +80,7 @@
   function exploded(res) {
     let more = 0, matched = false;
     for (const one of res.results) for (const t of one.terms) for (const d of t.dice) {
+      if (d.dropped) continue;     // a die the reading didn't use (a roll again that wasn't needed)
       if (d.extra) more++;
       else if (d.exploded && !d.note && d.rolls.length > 1) more += d.rolls.length - 1;     // compounded into one die
       if (d.matched) matched = true;

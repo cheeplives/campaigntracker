@@ -205,7 +205,7 @@ test("Twilight: 2000 4e: an attribute die and a skill die, 6+ a success and 10+ 
   const p = DS.params(DS.BY_ID.yzstep, DS.PRESETS.find(g => g.id === "t2k4").params);
   expect(DS.BY_ID.yzstep.build({ ...p, attr: 12, skill: 8, ammo: 3 })).toBe("1d12+1d8+3d6");
   expect(DS.BY_ID.yzstep.build({ ...p, attr: 10, skill: 0, ammo: 0 })).toBe("1d10");
-  expect(read("yzstep", fake([[11], [6]]), { attr: 12, skill: 8 })).toMatchObject({ big: 3, words: "successes", tier: "crit" });
+  expect(read("yzstep", fake([[11], [6]]), { attr: 12, skill: 8 })).toMatchObject({ big: 3, words: "successes", tier: "good" });
   expect(read("yzstep", fake([[10], [3]]), { attr: 10, skill: 6 })).toMatchObject({ big: 2, tier: "good" });
   expect(read("yzstep", fake([[5], [1]]), { attr: 8, skill: 6 })).toMatchObject({ big: 0, tier: "bad", note: "a 1 on the attribute and skill dice" });
   expect(read("yzstep", fake([[4], [2], [6, 6, 1]]), { attr: 8, skill: 6, ammo: 3 })).toMatchObject({ big: 2, note: "a 1 on the ammo dice" });
@@ -245,9 +245,11 @@ test("explosions in the game roll: on the top faces, and on doubles or triples, 
   expect(DS.rollText(DS.BY_ID.sum, DS.params(DS.BY_ID.sum, { xm: 2 }))).toBe("2d6!m2 @sum n=2 mod=0 tn=8 sides=6 wild=0 explode=0 xm=2");
   // a d20 that explodes on 20 still rolled a natural 20
   expect(read("d20", fake([[{ v: 27, rolls: [20, 7] }]], 0), { tn: 40, xt: 1 })).toMatchObject({ tier: "crit" });
-  // only the systems where they make sense have them; "exactly the target" only where there is a target
+  // every system can take criticals; explosions only where they make sense; "exactly the target" only where there is a target
   const keys = id => DS.BY_ID[id].params.map(d => d.key);
-  expect(keys("fudge")).not.toContain("cs");
+  for (const sys of DS.SYSTEMS) expect(keys(sys.id), sys.id).toContain("cs");
+  expect(keys("fudge")).not.toContain("xt");
+  expect(DS.BY_ID.fudge.params.find(d => d.key === "cs").opts.map(o => o[0])).toEqual(["none", "high", "low", "doubles"]);
   expect(keys("pbta")).not.toContain("xt");
   expect(DS.BY_ID.pbta.params.find(d => d.key === "cs").opts.map(o => o[0])).toEqual(["none", "high", "low", "doubles"]);
   expect(DS.BY_ID.under20.params.find(d => d.key === "cs").opts.map(o => o[0])).toEqual(["none", "high", "low", "exact"]);
@@ -286,4 +288,74 @@ test("criticals in the game roll: on the top face, a 1, exactly the target, or d
   const o = DS.odds(sum, DS.params(sum, { tn: 0, cs: "doubles", cf: "low" }), {}, 20000);
   expect(o.crit).toBeCloseTo(5 / 36, 1);
   expect(o.botch).toBeCloseTo(1 / 36, 1);
+});
+
+test("each game's own criticals and fumbles", () => {
+  const preset = id => DS.PRESETS.find(g => g.id === id);
+  const game = (id, r, more = {}) => { const g = preset(id); const sys = DS.BY_ID[g.system]; return DS.reading(sys, r, DS.params(sys, g.params, more), {}); };
+  // Cyberpunk RED: a natural 10 rolls one more d10 and adds it, a natural 1 one more and takes it away; else it isn't used
+  expect(DS.BY_ID.d20.build(DS.params(DS.BY_ID.d20, preset("cpred").params, { mod: 7 }))).toBe("1d10+1d10+7");
+  expect(game("cpred", fake([[10], [6]], 7))).toMatchObject({ big: 23, tier: "crit", words: "Critical success" });
+  expect(game("cpred", fake([[1], [6]], 12))).toMatchObject({ big: 7, tier: "botch", words: "Critical failure" });
+  const plainRoll = fake([[8], [6]], 7);
+  expect(game("cpred", plainRoll)).toMatchObject({ big: 15, tier: "good", words: "Success" });
+  expect(plainRoll.terms[1].dice[0].dropped).toBe(true);
+  expect(game("cpred", fake([[1], [2]], 20))).toMatchObject({ big: 19, tier: "good" });     // a 1 that still makes it
+  // Traveller: Effect 6 or more is exceptional, either way
+  expect(game("traveller", fake([[6, 6]], 2))).toMatchObject({ tier: "crit", words: "Exceptional success" });
+  expect(game("traveller", fake([[1, 1]]))).toMatchObject({ tier: "botch", words: "Exceptional failure" });
+  expect(game("traveller", fake([[4, 5]])).tier).toBe("good");
+  // AGE: doubles on a success give stunt points, as many as the dragon die (the last); on a failure nothing
+  expect(game("age", fake([[4, 4, 5]], 2))).toMatchObject({ tier: "crit", words: "Success, 5 stunt points" });
+  expect(game("age", fake([[2, 2, 1]])).tier).toBe("bad");
+  expect(game("age", fake([[2, 4, 6]])).tier).toBe("good");
+  // Rolemaster: 96+ rolls again and adds; 01–05 rolls again and takes it away
+  const rm = preset("rolemaster");
+  expect(DS.BY_ID.table.build(DS.params(DS.BY_ID.table, rm.params))).toBe("1d100!>=96+1d100!>=96");
+  expect(game("rolemaster", fake([[3], [70]]))).toMatchObject({ big: -67 });
+  const high = fake([[97, { v: 40, extra: true }], [70]]);
+  expect(game("rolemaster", high)).toMatchObject({ big: 137 });
+  expect(high.terms[1].dice[0].dropped).toBe(true);
+  expect(read("table", fake([[2]]), { fumble: 2 })).toMatchObject({ tier: "botch", words: "Fumble" });
+  // Ironsworn: a match on a strong hit is a critical, on a miss a fumble, on a weak hit just a match
+  expect(game("ironsworn", fake([[6], [3, 3]]), { stat: 2 })).toMatchObject({ tier: "crit", words: "Strong hit, a match" });
+  expect(game("ironsworn", fake([[1], [9, 9]]), { stat: 1 }).tier).toBe("botch");
+  expect(read("action", fake([[6], [3, 3]]), { stat: 2 }).tier).toBe("good");             // off unless asked for
+  // Rolemaster: an unmodified 01–05 is a fumble to start with
+  expect(game("rolemaster", fake([[5], [40]]))).toMatchObject({ tier: "botch", words: "Fumble" });
+  expect(game("rolemaster", fake([[6], [40]])).tier).not.toBe("botch");
+  // V20: five successes are exceptional
+  expect(game("v20", fake([[6, 7, 8, 9, 10, 2]]), { n: 6 }).tier).toBe("crit");
+  // Chronicles of Darkness: a pool of 0 is a chance die, a 10 succeeds, a 1 is a dramatic failure
+  expect(DS.BY_ID.pool.build(DS.params(DS.BY_ID.pool, preset("cofd").params, { n: 0 }))).toBe("1d10");
+  expect(game("cofd", fake([[10]]), { n: 0 })).toMatchObject({ big: 1, tier: "good" });
+  expect(game("cofd", fake([[9]]), { n: 0 })).toMatchObject({ big: 0, tier: "bad" });
+  expect(game("cofd", fake([[1]]), { n: 0 })).toMatchObject({ words: "Dramatic failure", tier: "botch" });
+  // Exalted: a botch is no successes and a 1
+  expect(game("exalted", fake([[1, 3, 5]]), { n: 3 }).tier).toBe("botch");
+  // RuneQuest / BRP: a critical a twentieth of the skill, a special a fifth, a fumble the top twentieth of the failure
+  expect(game("brp", fake([[3]]), { skill: 60 })).toMatchObject({ tier: "crit", words: "Critical success" });
+  expect(game("brp", fake([[12]]), { skill: 60 })).toMatchObject({ tier: "good", words: "Special success" });
+  expect(game("brp", fake([[45]]), { skill: 60 })).toMatchObject({ words: "Success" });
+  expect(game("brp", fake([[99]]), { skill: 60 })).toMatchObject({ tier: "botch", words: "Fumble" });
+  expect(game("brp", fake([[98]]), { skill: 60 })).toMatchObject({ tier: "bad" });
+  expect(game("brp", fake([[4]]), { skill: 2 }).words).toBe("Success");                    // 01–05 always succeeds
+  expect(game("brp", fake([[96]]), { skill: 120 }).words).toBe("Failure");                 // 96+ always fails
+  // Delta Green and Unknown Armies: 01 a critical, 100 a fumble, doubles either way
+  expect(game("deltagreen", fake([[1]]), { skill: 40 }).tier).toBe("crit");
+  expect(game("deltagreen", fake([[100]]), { skill: 99 }).tier).toBe("botch");
+  expect(game("deltagreen", fake([[22]]), { skill: 40 }).tier).toBe("crit");
+  expect(game("deltagreen", fake([[55]]), { skill: 40 }).tier).toBe("botch");
+  expect(game("ua", fake([[1]]), { skill: 40 }).tier).toBe("crit");
+  // WFRP: 01–05 always succeeds, 96–100 always fails
+  expect(game("wfrp4", fake([[4]]), { skill: 3 }).words).toMatch(/^Success/);
+  expect(game("wfrp4", fake([[97]]), { skill: 120 }).words).toMatch(/^Failure/);
+  // a game's own rule and a custom one together: Fate with "every die on its top face" as a critical, Blades with doubles as a fumble
+  expect(game("fate", sized([["F", [1, 1, 1, 1]]]), { skill: 0, opp: 6, cs: "high" })).toMatchObject({ tier: "crit", words: "Critical success" });
+  expect(game("blades", fake([[3, 3]]), { cf: "doubles" }).tier).toBe("botch");
+  expect(game("oracle", sized([[100, [44]]]), { cs: "doubles" }).tier).toBe("crit");
+  // a campaign saved before a game's newer rule picks it up; what the GM saved still wins
+  expect(DS.campaignSystem({ system: { id: "d20", game: "cpred", params: { die: 10, tn: 15 } } }).p.again).toBe(true);
+  expect(DS.campaignSystem({ system: { id: "d20", game: "cpred", params: { die: 10, again: false } } }).p.again).toBe(false);
+  expect(DS.campaignSystem({ system: { id: "d20", game: null, params: {} } }).p.again).toBe(false);
 });
