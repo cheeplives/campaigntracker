@@ -8,6 +8,8 @@
   function make(ctx) {
     const { DOWNTIME_KINDS, E, trail, itemStar, starsOf, pinButton, ENC_CATEGORIES, entryFields, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs, promptDialog, loadCampaign } = ctx;
 
+    const assistantButton = (...a) => (ctx.assistantButton ? ctx.assistantButton(...a) : null);   // static/assistant-panel.js
+
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
     // event, reminder or Locations visited list runs the Feature Highlighter (static/encyclopedia.js) over what was
@@ -573,6 +575,7 @@
       const actions = el('div', { class: 'row enc-actions' },
         ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
         edit,
+        assistantButton(),
         entryMenu(e, [
           !ch && canSheet && (!e.category || e.category === 'person')
             ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,

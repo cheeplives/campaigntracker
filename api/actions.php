@@ -166,6 +166,12 @@ const ACTIONS = [
     'economy_favour_save' => ['who' => 'member', 'touch' => true],
     'economy_favour_settle' => ['who' => 'member', 'touch' => true],
     'economy_favour_delete' => ['who' => 'member', 'touch' => true],
+    // the Assistant (api/assistant.php): GMs only, and nothing it reads is sent to a player
+    'assistant' => ['get' => true, 'who' => 'gm'],
+    'assistant_guide_save' => ['who' => 'gm'],
+    'assistant_context' => ['get' => true, 'who' => 'gm'],
+    'assistant_read' => ['get' => true, 'who' => 'gm'],
+    'assistant_search' => ['get' => true, 'who' => 'gm'],
     'dice_rolls' => ['get' => true, 'who' => 'member', 'key' => 'read'],
     'dice_roll' => ['who' => 'member', 'key' => 'write'],
     'dice_reroll' => ['who' => 'member'],

@@ -2975,3 +2975,51 @@ dialog.kit-dialog.econ-dialog { width: min(640px, calc(100vw - 32px)); max-heigh
 .econ-reward { padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); max-height: 160px; overflow-y: auto; }
 .econ-preview, .econ-skipped ul { margin: 0; padding-left: 1.2em; }
 .econ-dialog [hidden] { display: none; }
+
+/* The Assistant (static/assistant-panel.js): a conversation down the right of the page for GMs, and its form in Settings.
+   Beside the page on a wide screen, pushing it over as the dice panel does; over its right side on a narrower one
+   (an iPad either way up), where pushing would leave the page too little room to read. */
+.asst-panel { position: fixed; z-index: 68; right: 0; top: var(--topbar-h, 56px); bottom: 0; width: min(420px, 100vw); display: flex; flex-direction: column;
+  background: var(--panel); border-left: 1px solid var(--line); box-shadow: -14px 0 30px -24px rgb(0 0 0 / .8); }
+@media (min-width: 1300px) {
+  body.asst-open #app, body.asst-open .footer { margin-right: 420px; }
+  body.asst-open :is(.to-top, .dice-fab) { right: 438px; }
+}
+@media (max-width: 1299.98px) { body.asst-open :is(.to-top, .dice-fab) { display: none; } }
+.asst-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.asst-head h2 { margin: 0; font-size: 1.25rem; flex: 1; }
+.asst-read { padding: 7px 14px; border-bottom: 1px solid var(--line); background: var(--stock); font-size: .84rem; color: var(--dim); }
+.asst-read b { color: var(--text); font-weight: 600; }
+.asst-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.asst-msg, .asst-text { font-size: .95rem; line-height: 1.45; }
+:is(.asst-msg, .asst-text) :is(p, ul) { margin: 0 0 6px; }
+:is(.asst-msg, .asst-text) ul { padding-left: 1.2em; }
+:is(.asst-msg, .asst-text) > :last-child { margin-bottom: 0; }
+.asst-presets { margin: 8px 0 0; }
+.asst-me { align-self: flex-end; max-width: 88%; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; font-size: .93rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.asst-steps { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; color: var(--dim); }
+.asst-steps span { display: flex; align-items: center; gap: 6px; }
+.asst-note { margin: 0; font-size: .86rem; color: var(--dim); }
+.asst-note.bad { color: var(--text); padding: 6px 10px; border: 1px solid var(--bad); border-radius: var(--radius); }
+.asst-panel.busy .asst-body::after { content: 'Working…'; font-size: .82rem; color: var(--dim); }
+.asst-prop { background: var(--stock); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; }
+.asst-prop.secret { border-left: 3px solid var(--secret); }   /* GM only, as on an event or a note */
+.asst-prop .lbl { font-weight: 600; }
+.asst-prop .asst-sub { font-size: .82rem; color: var(--label); font-weight: 600; margin-top: 2px; }
+.asst-prop > p { margin: 0; }
+.asst-prop .why { font-size: .82rem; color: var(--dim); }
+.asst-prop .asst-rel { background: #5b6472; vertical-align: baseline; }
+.asst-prop .row { margin-bottom: 0; }
+.asst-prop textarea { font: inherit; font-size: .93rem; }
+.asst-prop.done { background: none; }
+.asst-done { font-size: .86rem; color: var(--dim); }
+.asst-foot { border-top: 1px solid var(--line); padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 6px; }
+.asst-foot .row { margin: 0; flex-wrap: nowrap; align-items: flex-end; }
+.asst-foot textarea { flex: 1; min-height: var(--ctl-h); resize: none; }
+.asst-use { font-size: .78rem; color: var(--dim); }
+.asst-set h3 { margin: 20px 0 2px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.asst-set h3 .grow { flex: 1; }
+.asst-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4px 16px; }
+.asst-guide textarea { min-height: 96px; }
+.asst-guide .secretfield textarea { border-left: 3px solid var(--secret); }   /* GM only */
+@media print { .asst-panel { display: none; } }

@@ -1124,3 +1124,16 @@ CREATE TABLE IF NOT EXISTS economy_wealth (
   PRIMARY KEY (campaign_id, character_id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The Assistant's campaign guide (see db/migrations/060_campaign_guides.sql and api/assistant.php): what a GM wants the
+-- assistant to always know about a campaign, one row per campaign, for GMs only. guide_json:
+--   {"premise": "…", "power": "…", "lines": "…", "style": "…", "canon": "…", "rules": "…", "secrets": "…"}
+CREATE TABLE IF NOT EXISTS campaign_guides (
+  campaign_id INT UNSIGNED NOT NULL PRIMARY KEY,
+  guide_json TEXT NOT NULL,
+  version INT UNSIGNED NOT NULL DEFAULT 1,
+  updated_by BIGINT UNSIGNED NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -14,13 +14,20 @@
  */
 declare(strict_types=1);
 
-const HISTORY_KINDS = ['entry', 'tome', 'session', 'day'];
+const HISTORY_KINDS = ['entry', 'tome', 'session', 'day', 'guide'];
 const HISTORY_KEEP = 50;            // versions kept per item
 const HISTORY_JOIN_SECONDS = 600;   // a second save by the same person this soon after the last replaces it
 
 /** The fields of an item as they are now, or null when it isn't there. ref: the entry, tome or session id, or the day's
- * absolute day number. */
+ * absolute day number. The Assistant's campaign guide (kind guide, api/assistant.php) is one per campaign: its ref is the
+ * campaign's id, and its fields are the guide's parts. */
 function history_live(int $cid, string $kind, int $ref): ?array {
+    if ($kind === 'guide') {
+        if ($ref !== $cid) return null;
+        $st = db()->prepare('SELECT 1 FROM campaign_guides WHERE campaign_id=?');
+        $st->execute([$cid]);
+        return $st->fetchColumn() ? assistant_guide($cid)['guide'] : null;
+    }
     $queries = [
         'entry' => 'SELECT name, aliases_json AS aliases, notes, gm_notes, is_secret, category, facts_json AS facts FROM encyclopedia_entries WHERE campaign_id=? AND id=?',
         'tome' => 'SELECT kind, title, description, body FROM library_tomes WHERE campaign_id=? AND id=?',
@@ -90,7 +97,7 @@ function history_row(int $cid, int $id): array {
 }
 function history_item_kind($v): string {
     $k = (string)$v;
-    if (!in_array($k, HISTORY_KINDS, true)) fail('Pick an entry, a tome, a session or a day');
+    if (!in_array($k, HISTORY_KINDS, true)) fail('Pick an entry, a tome, a session, a day or the campaign guide');
     return $k;
 }
 function history_out(array $r): array {
@@ -103,7 +110,7 @@ function history_apply(int $cid, array $v): void {
     $kind = $v['kind']; $ref = (int)$v['ref_id'];
     $d = json_decode((string)$v['data'], true);
     if (!is_array($d)) fail('That version can\'t be read', 500);
-    if ($kind !== 'day' && !history_live($cid, $kind, $ref)) fail('The ' . ($kind === 'tome' ? 'tome' : $kind) . ' it belonged to has been deleted', 404);
+    if ($kind !== 'day' && !history_live($cid, $kind, $ref)) fail('The ' . ($kind === 'guide' ? 'campaign guide' : $kind) . ' it belonged to has been deleted', 404);
     $s = fn(string $k) => isset($d[$k]) ? (string)$d[$k] : null;
     switch ($kind) {
     case 'entry':
@@ -121,6 +128,10 @@ function history_apply(int $cid, array $v): void {
     case 'session':
         db()->prepare('UPDATE play_sessions SET title=?, summary=?, rewards=?, loot=?, notes_text=?, summary_format=\'html\', version=version+1 WHERE campaign_id=? AND id=?')
             ->execute([(string)$s('title'), $s('summary'), $s('rewards'), $s('loot'), $s('notes_text'), $cid, $ref]);
+        break;
+    case 'guide':
+        db()->prepare('UPDATE campaign_guides SET guide_json=?, version=version+1, updated_by=? WHERE campaign_id=?')
+            ->execute([json_encode(assistant_guide_in($d), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), me()['id'], $cid]);
         break;
     case 'day':
         $has = db()->prepare('SELECT 1 FROM days WHERE campaign_id=? AND abs_day=?');

@@ -25,6 +25,7 @@ require __DIR__ . '/library.php';
 require __DIR__ . '/history.php';
 require __DIR__ . '/clocks.php';
 require __DIR__ . '/economy.php';
+require __DIR__ . '/assistant.php';
 require __DIR__ . '/dice.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/reports.php';
@@ -739,6 +740,8 @@ const CAMPAIGN_COPY = [
     ['economy_ledger', 'maps' => ['character_id' => 'character', 'favour_id' => 'econ_favour', 'fund_id' => 'funds', 'gear_id' => 'gear']],
     ['economy_costs', 'maps' => ['fund_id' => 'funds']],
     ['economy_wealth', 'maps' => ['character_id' => 'character']],
+    // The Assistant's campaign guide (db/migrations/060_campaign_guides.sql): a full copy carries it, a setup copy starts blank.
+    ['campaign_guides'],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -2120,6 +2123,14 @@ try {
     case 'economy_favour_settle':
     case 'economy_favour_delete':
         economy_action($action);
+
+    // ===== the Assistant ===== (api/assistant.php)
+    case 'assistant':
+    case 'assistant_guide_save':
+    case 'assistant_context':
+    case 'assistant_read':
+    case 'assistant_search':
+        assistant_action($action);
 
     // ===== the die roller ===== (api/dice.php)
     case 'dice_roll':

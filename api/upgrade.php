@@ -157,6 +157,8 @@ function upgrade_steps(): array {
             'A new API key now lasts a year unless you pick otherwise, and your Account page lists every panel link and API key you have. Keys made before this stay until revoked.'],
         ['059_economy.sql', fn(PDO $p) => !db_has_table($p, 'economy_wealth'),
             'Added the Economy tab: a price book in coins, barter, wealth or favours, prices that shift by region, a ledger of what the party gained and spent, regular costs, and favours owed.'],
+        ['060_campaign_guides.sql', fn(PDO $p) => !db_has_table($p, 'campaign_guides'),
+            'Added the Assistant: a helper for GMs, switched on in a campaign\'s Settings, that drafts entries and suggests connections with Claude, guided by a campaign guide the GM writes.'],
     ];
 }
 
