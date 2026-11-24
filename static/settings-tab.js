@@ -358,7 +358,7 @@
     }
 
     /** Settings' own tabs, each an address of its own (#/c/1/settings/calendar) so a save, a reload or a link keeps it. */
-    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['encyclopedia', 'Encyclopedia'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
+    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['encyclopedia', 'Encyclopedia'], ['assistant', 'Assistant'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
     function viewSettings(sub) {
       if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
       const at = SETTINGS_TABS.some(([k]) => k === sub) ? sub : 'campaign';
@@ -818,7 +818,60 @@
       };
       const tabs = el('nav', { class: 'settings-tabs', 'aria-label': 'Settings' }, SETTINGS_TABS.map(([k, label]) =>
         el('a', { href: `#/c/${S.camp.id}/settings${k === 'campaign' ? '' : '/' + k}`, class: k === at ? 'on' : '', ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
-      const card = { campaign: () => general, calendar: () => calForm, dice, encyclopedia, weather: tuningCard, tools: () => danger }[at]();
+      // The Assistant (static/assistant.js, static/assistant-panel.js): the switch that turns it on for this campaign,
+      // which model it uses and its genre pack (in the campaign's settings), and the campaign guide, which only GMs
+      // are ever sent (api/assistant.php keeps it apart from the settings every member gets).
+      const assistant = () => {
+        const A = root.Assistant, a = st.assistant || {};
+        const hasKey = typeof MapScan !== 'undefined' && !!MapScan.apiKey.get();
+        const onBox = el('input', { type: 'checkbox', name: 'enabled', checked: !!a.enabled });
+        const modelSel = select(A.MODELS.map(m => [m.id, `${m.label} (${m.name})`]), A.modelOf(a.model).id, { name: 'model' });
+        const packSel = select([['', 'None']], '', { name: 'pack' });
+        const guideBox = el('div', { class: 'asst-guide' }, el('p', { class: 'muted' }, 'Loading…'));
+        const guideNote = el('p', { class: 'muted small', style: 'margin:0 0 4px' }, 'What the assistant should always know about this campaign. It is read with every request, and only GMs can see it.');
+        const histSlot = el('span', {});
+        const save = el('button', { class: 'primary', disabled: true }, 'Save assistant settings');
+        const form = el('form', { class: 'card asst-set' }, el('h2', {}, 'Assistant'),
+          el('p', { class: 'muted', style: 'margin-top:0' }, 'A helper for GMs that reads this campaign and drafts Encyclopedia entries, suggests connections and comes up with plot points. It only proposes: nothing is saved until a GM accepts it, and players never see it. When it is on, GMs get an Assistant button on every entry and session.'),
+          field('Assistant on for this campaign', onBox, 'When a GM uses it, their browser sends what it reads (entries, sessions, connections and the guide below, GM-only text included) to Anthropic\'s Claude, with that GM\'s own API key. Nothing is sent while it is off'),
+          el('p', { class: 'muted small' }, hasKey ? 'Your Anthropic API key is saved in this browser, so requests are billed to your Anthropic account: usually a few cents each.'
+            : ['Each GM uses their own Anthropic API key, kept in their own browser, and is billed by Anthropic for what they ask: usually a few cents a request. ', el('a', { href: '#/account' }, 'Add your key on your account page'), '.']),
+          el('div', { class: 'grid2' },
+            field('Quality', modelSel, 'Balanced suits most drafting. Most careful costs about twice as much, and fastest about a twentieth'),
+            field('Genre pack', packSel, 'A starting point for tone, typical people and places, and what trouble looks like. The guide below wins where they differ')),
+          el('h3', {}, 'Campaign guide', el('span', { class: 'grow' }), histSlot),
+          guideNote, guideBox,
+          el('div', { class: 'row' }, save));
+        let version = 0, loaded = null;
+        api('assistant', { query: { cid: S.camp.id } }).then(r => {
+          version = r.version; loaded = r.guide;
+          packSel.replaceChildren(...r.packs.map(k => el('option', { value: k.key }, k.name)));
+          packSel.prepend(el('option', { value: '' }, 'None'));
+          packSel.value = r.packs.some(k => k.key === a.pack) ? a.pack : '';
+          guideBox.replaceChildren(...A.GUIDE.map(([k, label, hint]) => {
+            const f = field(k === 'secrets' ? `🔒 ${label}` : label, el('textarea', { name: `guide_${k}`, rows: 4, maxlength: r.limits[k], value: r.guide[k] || '' }), hint);
+            if (k === 'secrets') f.classList.add('secretfield');
+            return f;
+          }));
+          if (r.updated_at) guideNote.append(` Last changed by ${r.updated_by || 'someone'} on ${r.updated_at.slice(0, 10)}.`);
+          if (r.version) histSlot.append(btn('🕘 History', () => HistoryView.open({ kind: 'guide', ref: S.camp.id, title: 'the campaign guide', cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of the guide, what each save changed, and Restore'));
+          save.disabled = false;
+        }).catch(err => { guideBox.replaceChildren(el('p', { class: 'muted' }, `The guide couldn't be loaded: ${err.message}`)); });
+        form.addEventListener('submit', async ev => {
+          ev.preventDefault();
+          if (!loaded) return;
+          const v = formData(form);
+          const guide = Object.fromEntries(A.GUIDE.map(([k]) => [k, v[`guide_${k}`].trim()]));
+          save.disabled = true;
+          try {
+            if (A.GUIDE.some(([k]) => guide[k] !== (loaded[k] || ''))) await post('assistant_guide_save', { guide, version }, S.camp.id);
+            await post('campaign_update', { settings: { ...st, assistant: { enabled: !!v.enabled, model: v.model, pack: v.pack } } }, S.camp.id);
+            await loadCampaign(S.camp.id, true); toast('Saved'); route();
+          } catch (err) { save.disabled = false; toast(err.message, true); }
+        });
+        return form;
+      };
+      const card = { campaign: () => general, calendar: () => calForm, dice, encyclopedia, assistant, weather: tuningCard, tools: () => danger }[at]();
       card.prepend(tabs);
       mount(...campaignHeader('settings'), card);
     }

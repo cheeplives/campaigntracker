@@ -17,9 +17,10 @@ const HistoryView = (() => {
       ['notes', 'Public notes', html], ['gm_notes', 'GM notes', html]],
     tome: [['title', 'Title', text, true], ['kind', 'Kind', text, true], ['description', 'Description', text, true], ['body', 'Contents', html]],
     session: [['title', 'Title', text, true], ['summary', 'Summary', html], ['rewards', 'Session Rewards', html], ['loot', 'Loot Found', html], ['notes_text', 'Notes', text]],
+    guide: typeof Assistant === 'undefined' ? [] : Assistant.GUIDE.map(([k, label]) => [k, label, text]),
     day: [['notes', 'Public notes', (v, d) => (d.notes_format === 'html' ? html(v) : text(v))], ['gm_notes', 'Secret notes', (v, d) => (d.gm_notes_format === 'html' ? html(v) : text(v))]],
   };
-  const KIND_NAME = { entry: 'entry', tome: 'tome', session: 'session', day: 'day' };
+  const KIND_NAME = { entry: 'entry', tome: 'tome', session: 'session', day: 'day', guide: 'campaign guide' };
 
   /** Open the dialog. kind: 'entry', 'tome', 'session' or 'day'; ref: its id (the absolute day for a day); cid: the
    * campaign; api(action, { query }) and post(action, body, cid) are app.js's; onRestore() runs after a restore. */

@@ -1011,9 +1011,9 @@
       const remember = el('input', { type: 'checkbox', name: 'remember', checked: MapScan.apiKey.remembered() });
       const show = () => { state.textContent = !has() ? 'No key saved in this browser.' : MapScan.apiKey.remembered() ? 'A key is saved in this browser.' : 'A key is saved in this browser, until you close this tab or sign out.'; forget.style.display = has() ? '' : 'none'; };
       scanner = el('form', { class: 'card narrow' }, el('h2', {}, 'Your Anthropic key'),
-        el('p', { class: 'muted' }, 'Two things can have Claude do the reading, using your own Anthropic API key, so they are billed to your Anthropic account: Scan for names on a map (a few cents a scan) and Draft from transcript on a session (about 20 cents a game night). Create a key at ',
+        el('p', { class: 'muted' }, 'Three things can have Claude do the reading or the drafting, using your own Anthropic API key, so they are billed to your Anthropic account: Scan for names on a map (a few cents a scan), Draft from transcript on a session (about 20 cents a game night) and the Assistant, in a campaign that has switched it on (usually a few cents a request). Create a key at ',
           el('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'),
-        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you use it from. When you scan or draft, your browser sends the map\'s picture or the transcript, with the key, straight to Anthropic. Signing out removes it.'),
+        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you use it from. When you scan or draft, your browser sends the map\'s picture, the transcript or what the Assistant reads, with the key, straight to Anthropic. Signing out removes it.'),
         field('Anthropic API key', keyIn),
         el('label', { class: 'small' }, remember, ' Remember it on this device. Leave this off on a computer you share: the key then lasts until you close this tab'), state,
         el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save key'), forget));
@@ -7338,6 +7338,8 @@
             extLink({ url: 'https://www.anthropic.com/legal/commercial-terms', title: 'Anthropic\'s commercial terms' }), ' the names it returns belong to the GM. The GM approves each one before it is pinned.'],
           ['Draft from transcript on a session: only when a GM picks it, their browser sends the transcript they chose, the names of the people in it and of the campaign\'s Encyclopedia entries, the summary of the session before and their own notes to ', extLink({ url: 'https://www.anthropic.com/', title: 'Anthropic' }),
             '\'s API with the GM\'s own API key, and Claude (the model the GM picks: ', (typeof Transcript !== 'undefined' ? Transcript.MODELS.map(m => m.id).join(', ') : 'claude-sonnet-5-5'), ') drafts the session\'s notes and summary. The transcript comes from the GM\'s own recording tool; it is never uploaded to this site or kept. The GM ticks what to keep before any of it is added.'],
+          ['The Assistant, where a GM has switched it on in a campaign\'s Settings: only when a GM asks it something, their browser sends the campaign guide, a short index of the campaign\'s entries, sessions and connections, and the entries and sessions the request needs (GM-only text included) to ', extLink({ url: 'https://www.anthropic.com/', title: 'Anthropic' }),
+            '\'s API with the GM\'s own API key, and Claude (the model the campaign picks: ', (typeof Assistant !== 'undefined' ? Assistant.MODELS.map(m => m.id).join(', ') : 'claude-sonnet-5-5'), ') drafts entries, connections and ideas. The conversation is kept nowhere on this site, and nothing Claude proposes is saved until the GM accepts it. Its genre packs are short notes written for this app about kinds of game, with nothing from any published setting.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['The 3D dice on the die roller: ', cite('three'), '. The dice shapes, the numbers on them and the dice patterns (marble, wood, stone and the rest) are drawn in your browser by this app; no picture files are used.'],
           ['The idea for the dice skins (Paladin, Warlock, Druid, Fire, Lava, Shield, Leopard and Pink pinstripe): ', cite('diceSkins'), '. Only the ideas are borrowed; the skins are drawn by this app, and none of the mod\'s files or pictures are used.'],
@@ -8205,6 +8207,10 @@
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, trail, copyButton, pinButton, vs
   };
+  // The Assistant's panel (static/assistant-panel.js): its button goes on the entry and session pages, for GMs of a
+  // campaign that has switched it on. The At the Table panel doesn't load it.
+  const assistant = typeof AssistantPanel !== 'undefined' ? AssistantPanel.make(tabCtx) : null;
+  tabCtx.assistantButton = (...a) => (assistant ? assistant.assistantButton(...a) : null);
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, questRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
   ({ viewSessions } = SessionsTab.make(tabCtx));

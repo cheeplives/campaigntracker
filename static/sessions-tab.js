@@ -259,7 +259,7 @@
         el('div', { class: 'sess-notes' }, notesHead, entry.node, actsSlot),
         el('div', { class: 'sess-summary' },
           el('div', { class: 'row sess-sumhead' }, el('h3', {}, 'Summary', tip('What you write up from the notes. GM-only paragraphs (🔒) never reach players')),
-            el('div', { class: 'row' }, edit, cancel, save)),
+            el('div', { class: 'row' }, isGM() ? ctx.assistantButton() : null, edit, cancel, save)),
           reading,
           editing));
       editing.append(editor.node,
