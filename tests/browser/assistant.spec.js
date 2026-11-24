@@ -265,6 +265,10 @@ test("a session's page has the assistant too, and without a key it says where to
   const { cid, ok, sid } = await ready(page, browser);
   await switchOn(ok);
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  // a phone shows the notes or the summary, one at a time; the assistant is with the summary
+  const summaryTab = page.getByRole("button", { name: "Summary", exact: true });
+  await expect(page.locator(".sess-cols")).toBeVisible();
+  if (await summaryTab.isVisible()) await summaryTab.click();
   await page.getByRole("button", { name: "Assistant" }).click();
   const panel = page.getByRole("complementary", { name: "Assistant" });
   await expect(panel.locator(".asst-read")).toHaveText("About the session on this page and whatever else it needs to read");
