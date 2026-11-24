@@ -2898,3 +2898,80 @@ dialog.tour.no-target { background: rgb(0 0 0 / .55); }
 
 /* an entry's editor in a dialog over the map */
 .kit-dialog.entry-dialog { width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
+
+/* ---------- The Economy tab (static/economy-tab.js): a price book, a ledger and favours, in the theme's tokens */
+.econ-root { display: flex; flex-direction: column; gap: 14px; }
+.econ-page { display: flex; flex-direction: column; gap: 14px; }
+.econ-two { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.econ-half { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .econ-two { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .econ-half { grid-template-columns: minmax(0, 1fr); } }
+.econ-page .card { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.econ-page .card h3, .econ-page h2 { margin: 0; }
+.econ-page .card p { margin: 0; }
+.econ-n { font: 400 .9rem var(--body); color: var(--dim); }
+.econ-badge { display: inline-block; font: 600 .78rem var(--body); padding: 1px 8px; margin: 1px 2px 1px 0; border: 1px solid var(--line); border-radius: var(--radius); color: var(--dim); white-space: nowrap; }
+.econ-badge.on { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); border-color: var(--accent); color: var(--text); }
+.econ-badge.bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); color: var(--bad-text); }
+.econ-filters { margin-top: 0; }
+.econ-find { flex: 1 1 160px; min-width: 0; }
+.econ-upload { display: inline-flex; }
+/* the price book: a real table; the name opens "Can the party afford it?" */
+.econ-table-wrap { overflow-x: auto; }
+.econ-table { width: 100%; border-collapse: collapse; }
+.econ-table th { text-align: left; font: 600 .82rem var(--body); color: var(--label); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.econ-table td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.econ-table .num { text-align: right; white-space: nowrap; }
+.econ-table td:first-child { width: 46%; min-width: 180px; }
+.econ-table tr.picked td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.econ-table tr.picked td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.econ-table tr.secret td:first-child { box-shadow: inset 3px 0 0 var(--secret); }   /* GM only */
+button.econ-item { all: unset; cursor: pointer; font-weight: 600; margin-right: 6px; overflow-wrap: anywhere; }
+button.econ-item:hover { text-decoration: underline; }
+button.econ-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius); }
+.econ-was { display: block; color: var(--dim); font-size: .82rem; font-weight: 400; }
+.econ-shift, .econ-cost { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.econ-shift.ended, .econ-shift.ended * { color: var(--dim); }
+.econ-shift-acts { margin-top: 0; flex-wrap: nowrap; }
+/* the ledger: the days as headings, then amount, what for, who */
+.econ-day { margin: 12px 0 2px; padding-bottom: 3px; border-bottom: 1px solid var(--line); }
+.econ-ledger .econ-day:first-child { margin-top: 0; }
+.econ-entry { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); align-items: baseline; }
+.econ-entry.secret { box-shadow: inset 3px 0 0 var(--secret); padding-left: 8px; }   /* GM only */
+.econ-entry > .econ-badge { justify-self: start; }
+.econ-amt { font-weight: 600; }
+.econ-amt.out { color: var(--bad-text); }
+.econ-where { display: block; color: var(--dim); font-size: .82rem; }
+.econ-who { color: var(--dim); font-size: .82rem; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+@media (max-width: 560px) { .econ-entry { grid-template-columns: minmax(0, 1fr) auto; } .econ-entry > :first-child { grid-column: 1 / -1; } }
+.econ-fund { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.econ-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* favours: one card each; a GM-only one carries the secret edge */
+.econ-favour.secret { border-left: 4px solid var(--secret); }
+.econ-favour-head { flex-wrap: nowrap; align-items: flex-start; }
+.econ-favour h3 { overflow-wrap: anywhere; }
+.econ-settled summary { cursor: pointer; }
+.econ-settled summary h3 { display: inline; }
+/* setup: the steps, the four ways to pay, the everyday prices */
+.econ-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.econ-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.econ-ways-wrap { display: flex; flex-direction: column; gap: 10px; }
+.econ-ways-wrap > p { margin: 0; }
+.econ-way.on { border-color: var(--accent); }
+.econ-lines { display: flex; flex-direction: column; gap: 6px; }
+.econ-line { display: grid; gap: 6px; align-items: center; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 32px; }
+.econ-line.cols-3 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 32px; }
+.econ-line input, .econ-every-row input, .econ-every-row select { width: 100%; min-width: 0; }
+.econ-way textarea { width: 100%; }
+.econ-every { display: flex; flex-direction: column; gap: 6px; }
+.econ-every-row { display: grid; gap: 6px 10px; align-items: center; grid-template-columns: minmax(0, 1.6fr) repeat(var(--econ-cols, 3), minmax(0, 1fr)) 32px; }
+.econ-foot { justify-content: flex-end; }
+.econ-foot > :first-child:not(:only-child) { margin-right: auto; }
+dialog.kit-dialog.econ-dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.econ-dialog form { display: flex; flex-direction: column; gap: 4px; }
+.econ-dialog textarea { width: 100%; }
+.econ-pick { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.econ-pick label { display: inline-flex; align-items: center; gap: 6px; min-height: var(--ctl-h); cursor: pointer; }
+.econ-reward { padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); max-height: 160px; overflow-y: auto; }
+.econ-preview, .econ-skipped ul { margin: 0; padding-left: 1.2em; }
+.econ-dialog [hidden] { display: none; }

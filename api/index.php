@@ -24,6 +24,7 @@ require __DIR__ . '/files.php';
 require __DIR__ . '/library.php';
 require __DIR__ . '/history.php';
 require __DIR__ . '/clocks.php';
+require __DIR__ . '/economy.php';
 require __DIR__ . '/dice.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/reports.php';
@@ -724,11 +725,20 @@ const CAMPAIGN_COPY = [
     // after the characters: a party character's action points at its sheet (character_id 0: the party's or a player's)
     ['shift_actions', 'maps' => ['character_id' => 'character']],
     // after the characters too: a character's own holdings (character_id, 051) go with its copy; the party's have none
-    ['party_gear', 'maps' => ['character_id' => 'character']],
+    ['party_gear', 'key' => 'gear', 'maps' => ['character_id' => 'character']],
     ['holdings', 'key' => 'holdings', 'maps' => ['character_id' => 'character'], 'later' => ['party_group_id' => 'group']],   // a vehicle's group (052) once the groups are copied
     ['holding_tags', 'via' => ['holding_id', 'holdings'], 'maps' => ['tag_id' => 'holding_tags']],
     ['holding_storage', 'via' => ['holding_id', 'holdings']],
-    ['party_funds', 'maps' => ['character_id' => 'character']],
+    ['party_funds', 'key' => 'funds', 'maps' => ['character_id' => 'character']],
+    // The Economy tab (db/migrations/059_economy.sql). The ledger and the regular costs point at the funds lines and gear
+    // rows copied above.
+    ['economy_config', 'setup' => true],
+    ['economy_items', 'key' => 'econ_item', 'setup' => true],
+    ['economy_shifts', 'maps' => ['region_id' => 'regions', 'item_id' => 'econ_item'], 'setup' => true],
+    ['economy_favours', 'key' => 'econ_favour', 'maps' => ['character_id' => 'character', 'entry_id' => 'encyclopedia']],
+    ['economy_ledger', 'maps' => ['character_id' => 'character', 'favour_id' => 'econ_favour', 'fund_id' => 'funds', 'gear_id' => 'gear']],
+    ['economy_costs', 'maps' => ['fund_id' => 'funds']],
+    ['economy_wealth', 'maps' => ['character_id' => 'character']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -1363,6 +1373,7 @@ try {
         // label: the new date and shift in words ("Dusk, 3 Firstmonth 1492"), which the calendar maths in the browser
         // (static/engine.js) works out; it is only for the campaign's Discord channels
         $label = trim((string)str_in(p('label'), 200));
+        if ($shift > $was) econ_post_due($cid);   // regular costs the clock has reached go on the ledger (api/economy.php)
         if ($shift !== $was) webhook_say($cid, 'time', $label !== '' ? 'It is now ' . webhook_plain($label, 200) . '.' : ($shift > $was ? 'Time has passed.' : 'The clock was turned back.'));
         out(['ok' => true, 'current_shift' => $shift]);
 
@@ -2090,6 +2101,25 @@ try {
     case 'clock_tick':
     case 'clock_delete':
         clocks_action($action);
+
+    // ===== the Economy tab ===== (api/economy.php)
+    case 'economy':
+    case 'economy_ledger':
+    case 'economy_config_save':
+    case 'economy_item_save':
+    case 'economy_item_delete':
+    case 'economy_items_import':
+    case 'economy_shift_save':
+    case 'economy_shift_delete':
+    case 'economy_entry_save':
+    case 'economy_entry_delete':
+    case 'economy_wealth_set':
+    case 'economy_cost_save':
+    case 'economy_cost_delete':
+    case 'economy_favour_save':
+    case 'economy_favour_settle':
+    case 'economy_favour_delete':
+        economy_action($action);
 
     // ===== the die roller ===== (api/dice.php)
     case 'dice_roll':
