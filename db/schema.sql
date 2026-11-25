@@ -1127,10 +1127,11 @@ CREATE TABLE IF NOT EXISTS economy_wealth (
 
 -- The Assistant's campaign guide (see db/migrations/060_campaign_guides.sql and api/assistant.php): what a GM wants the
 -- assistant to always know about a campaign, one row per campaign, for GMs only. guide_json:
---   {"premise": "…", "power": "…", "lines": "…", "style": "…", "canon": "…", "rules": "…", "secrets": "…"}
+--   {"prompt": "…", "premise": "…", "power": "…", "lines": "…", "style": "…", "canon": "…", "rules": "…", "secrets": "…"}
+-- prompt is the long one (the campaign prompt, up to 12,000 characters), hence MEDIUMTEXT (061_guide_prompt.sql).
 CREATE TABLE IF NOT EXISTS campaign_guides (
   campaign_id INT UNSIGNED NOT NULL PRIMARY KEY,
-  guide_json TEXT NOT NULL,
+  guide_json MEDIUMTEXT NOT NULL,
   version INT UNSIGNED NOT NULL DEFAULT 1,
   updated_by BIGINT UNSIGNED NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -3021,5 +3021,7 @@ dialog.kit-dialog.econ-dialog { width: min(640px, calc(100vw - 32px)); max-heigh
 .asst-set h3 .grow { flex: 1; }
 .asst-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4px 16px; }
 .asst-guide textarea { min-height: 96px; }
+.asst-guide .asst-prompt { grid-column: 1 / -1; }
+.asst-guide .asst-prompt textarea { min-height: 300px; }
 .asst-guide .secretfield textarea { border-left: 3px solid var(--secret); }   /* GM only */
 @media print { .asst-panel { display: none; } }

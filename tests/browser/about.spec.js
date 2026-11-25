@@ -86,6 +86,8 @@ test("About & sources: a link leads back to the page it was opened from", async 
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Back ${gm.id}`);
   await page.goto(`index.html#/c/${cid}/calendar`);
+  // once the month is drawn: clicked while the page is still filling in, the footer moves from under the click
+  await expect(page.locator("a.daycell").first()).toBeVisible();
   await page.locator(".footer").getByRole("link", { name: "About & sources" }).click();
   await expect(page.getByRole("heading", { name: "About GM's Almanac" })).toBeVisible();
   await page.reload();
