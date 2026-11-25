@@ -14,7 +14,7 @@ async function get(page, action, params, cid) {
   const res = await page.request.get(`api/index.php?${new URLSearchParams({ a: action, cid, ...params })}`);
   return { status: res.status(), json: await res.json() };
 }
-const GUIDE = { premise: "A salt port. Nobody is a hero.", power: "", lines: "", style: "Terse.", canon: "", rules: "", secrets: "Brandt cut the pages himself." };
+const GUIDE = { prompt: "Agenda: make the port feel real. Principles: name everyone, ask questions and build on the answers.", premise: "A salt port. Nobody is a hero.", power: "", lines: "", style: "Terse.", canon: "", rules: "", secrets: "Brandt cut the pages himself." };
 
 /** A GM and a player in a campaign with two entries (one GM only), a connection-free Encyclopedia and one session. */
 async function ready(page, browser) {
@@ -54,6 +54,9 @@ test("the assistant's actions: GMs only, off until switched on, and the guide is
   expect(g.guide).toEqual(GUIDE);
   expect((await api(page, "assistant_guide_save", { guide: GUIDE, version: 0 }, cid)).status).toBe(409);
   expect((await api(page, "assistant_guide_save", { guide: { ...GUIDE, premise: "x".repeat(2001) }, version: 1 }, cid)).status).toBe(400);
+  // the campaign prompt is the long part: 12,000 characters, kept whole even in a script of several bytes a character
+  expect((await get(page, "assistant", {}, cid)).json.limits).toMatchObject({ prompt: 12000, premise: 2000 });
+  expect((await api(page, "assistant_guide_save", { guide: { ...GUIDE, prompt: "x".repeat(12001) }, version: 1 }, cid)).status).toBe(400);
   expect(JSON.stringify((await get(pp, "campaign", {}, cid)).json)).not.toContain("Brandt cut the pages");
 
   // its history: a later save is a second version, and a restore puts the first back
@@ -66,6 +69,10 @@ test("the assistant's actions: GMs only, off until switched on, and the guide is
   g = (await get(page, "assistant", {}, cid)).json;
   expect(g.guide.premise).toBe(GUIDE.premise);
   expect(g.version).toBe(3);
+  const long = "港".repeat(12000);
+  expect((await ok("assistant_guide_save", { guide: { ...GUIDE, prompt: long, canon: "港".repeat(4000), secrets: "港".repeat(4000) }, version: 3 })).version).toBe(4);
+  expect((await get(page, "assistant", {}, cid)).json.guide.prompt).toBe(long);
+  await ok("assistant_guide_save", { guide: GUIDE, version: 4 });
 
   // reading waits for the switch
   for (const a of ["assistant_context", "assistant_read", "assistant_search"]) {
@@ -125,11 +132,13 @@ test("a GM switches the assistant on, writes the guide, and accepts what Claude 
   await expect(form.getByLabel("Premise and tone")).toBeVisible();
   await form.getByLabel("Assistant on for this campaign").check();
   await form.getByLabel("Genre pack").selectOption({ label: "Grim low fantasy" });
+  await form.getByLabel("Campaign prompt").fill(GUIDE.prompt);
   await form.getByLabel("Premise and tone").fill(GUIDE.premise);
   await form.getByLabel("GM-only truths").fill(GUIDE.secrets);
   await form.getByRole("button", { name: "Save assistant settings" }).click();
   await expect(page.locator("#toast")).toContainText("Saved");
   await expect(form.getByLabel("Premise and tone")).toHaveValue(GUIDE.premise);
+  await expect(form.getByLabel("Campaign prompt")).toHaveValue(GUIDE.prompt);
   await expect(form.getByLabel("Assistant on for this campaign")).toBeChecked();
   await expect(form.getByRole("button", { name: "History" })).toBeVisible();
   expect((await get(page, "assistant", {}, cid)).json.guide).toMatchObject({ premise: GUIDE.premise, secrets: GUIDE.secrets });
@@ -171,7 +180,7 @@ test("a GM switches the assistant on, writes the guide, and accepts what Claude 
   expect(sent[0].headers["anthropic-dangerous-direct-browser-access"]).toBe("true");
   expect(sent[0].body).toMatchObject({ model: "claude-sonnet-5-5", fallbacks: "default" });
   const campaign = sent[0].body.system[1].text;
-  for (const t of ["Genre notes (Grim low fantasy)", GUIDE.premise, GUIDE.secrets, `${mara} | Mara Hoffmann | person`, `${ring} | The Tallow Ring [GM only] | group`, "Session 1: The cut pages"]) expect(campaign).toContain(t);
+  for (const t of ["Genre notes (Grim low fantasy)", `Campaign prompt:\n${GUIDE.prompt}`, GUIDE.premise, GUIDE.secrets, `${mara} | Mara Hoffmann | person`, `${ring} | The Tallow Ring [GM only] | group`, "Session 1: The cut pages"]) expect(campaign).toContain(t);
   const first = sent[0].body.messages[0].content;
   expect(first).toContain("The GM has this entry open on the page:");
   expect(first).toContain("GM notes (players never see these):\nOwes the Ring money.");

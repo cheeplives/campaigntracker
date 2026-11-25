@@ -159,6 +159,9 @@ function upgrade_steps(): array {
             'Added the Economy tab: a price book in coins, barter, wealth or favours, prices that shift by region, a ledger of what the party gained and spent, regular costs, and favours owed.'],
         ['060_campaign_guides.sql', fn(PDO $p) => !db_has_table($p, 'campaign_guides'),
             'Added the Assistant: a helper for GMs, switched on in a campaign\'s Settings, that drafts entries and suggests connections with Claude, guided by a campaign guide the GM writes.'],
+        ['061_guide_prompt.sql', fn(PDO $p) => db_has_table($p, 'campaign_guides')
+                && strtolower((string)($p->query("SHOW COLUMNS FROM `campaign_guides` LIKE 'guide_json'")->fetch(PDO::FETCH_ASSOC)['Type'] ?? '')) === 'text',
+            'The Assistant\'s campaign guide has room for a campaign prompt: a longer brief with the campaign\'s agenda, principles and what is in motion.'],
     ];
 }
 

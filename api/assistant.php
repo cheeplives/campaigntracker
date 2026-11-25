@@ -10,12 +10,12 @@
  * assistant proposes is saved, once a GM accepts it, by the same actions the pages use (entry_save, relations_save).
  *
  * A GM switches it on in Settings (settings.assistant.enabled); until then the reading actions refuse.
- * db/migrations/060_campaign_guides.sql describes the guide's table.
+ * db/migrations/060_campaign_guides.sql describes the guide's table (061_guide_prompt.sql gave it room for the campaign prompt).
  */
 declare(strict_types=1);
 
 /** The guide's parts, in the order the form shows them: key => the most characters it holds. */
-const ASSISTANT_GUIDE = ['premise' => 2000, 'power' => 2000, 'lines' => 2000, 'style' => 2000, 'canon' => 4000, 'rules' => 2000, 'secrets' => 4000];
+const ASSISTANT_GUIDE = ['prompt' => 12000, 'premise' => 2000, 'power' => 2000, 'lines' => 2000, 'style' => 2000, 'canon' => 4000, 'rules' => 2000, 'secrets' => 4000];
 const ASSISTANT_READ_MAX = 24000;     // the most characters of one entry or session handed over
 const ASSISTANT_INDEX_MAX = 3000;     // the most entries in the index
 const ASSISTANT_LINKS_MAX = 3000;     // the most connections in the index

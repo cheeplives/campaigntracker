@@ -849,8 +849,9 @@
           packSel.prepend(el('option', { value: '' }, 'None'));
           packSel.value = r.packs.some(k => k.key === a.pack) ? a.pack : '';
           guideBox.replaceChildren(...A.GUIDE.map(([k, label, hint]) => {
-            const f = field(k === 'secrets' ? `🔒 ${label}` : label, el('textarea', { name: `guide_${k}`, rows: 4, maxlength: r.limits[k], value: r.guide[k] || '' }), hint);
+            const f = field(k === 'secrets' ? `🔒 ${label}` : label, el('textarea', { name: `guide_${k}`, rows: k === 'prompt' ? 14 : 4, maxlength: r.limits[k], value: r.guide[k] || '' }), hint);
             if (k === 'secrets') f.classList.add('secretfield');
+            if (k === 'prompt') f.classList.add('asst-prompt');   // the long one: the full width, and tall
             return f;
           }));
           if (r.updated_at) guideNote.append(` Last changed by ${r.updated_by || 'someone'} on ${r.updated_at.slice(0, 10)}.`);

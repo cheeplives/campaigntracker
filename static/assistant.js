@@ -26,6 +26,7 @@
   const CATEGORIES = ['location', 'person', 'item', 'group', 'vehicle', 'quest'];
   /** The guide's parts as the form and the prompt name them: [key, label, hint]. */
   const GUIDE = [
+    ['prompt', 'Campaign prompt', 'The long brief, as a Powered by the Apocalypse game gives its GM: your agenda, your principles, the fronts and threats in motion, and the questions the campaign is asking. Up to 12,000 characters'],
     ['premise', 'Premise and tone', 'What the campaign is about and how it should feel'],
     ['power', 'Game and power level', 'The rules you play, and how capable and how fragile the characters are'],
     ['lines', 'Content lines', 'What never appears, and what happens off screen'],

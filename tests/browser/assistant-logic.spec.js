@@ -8,7 +8,7 @@ const A = require(path.join(__dirname, "..", "..", "static", "assistant.js"));
 const CTX = {
   campaign: { name: "Port Varrow", description: "A salt port" },
   pack: { name: "Grim low fantasy", text: "Mud, debt and hard choices." },
-  guide: { premise: "Nobody is a hero.", power: "", lines: "", style: "", canon: "", rules: "", secrets: "Brandt cut the pages." },
+  guide: { prompt: "Agenda: fill the port with trouble.\n\nPrinciples: name everyone.", premise: "Nobody is a hero.", power: "", lines: "", style: "", canon: "", rules: "", secrets: "Brandt cut the pages." },
   entries: [{ id: 1, name: "Mara Hoffmann", category: "person", aliases: ["the innkeeper"], gm_only: false, gist: "Runs the Gilded Eel." },
     { id: 2, name: "The Tallow Ring", category: "group", aliases: [], gm_only: true, gist: "Smugglers." }],
   entries_total: 2,
@@ -19,7 +19,7 @@ const NAMES = new Map([[1, "Mara Hoffmann"], [2, "The Tallow Ring"]]);
 
 test("the campaign text carries the pack, the guide and the index, and marks what players can't see", () => {
   const t = A.campaignText(CTX);
-  for (const s of ["Campaign: Port Varrow", "Genre notes (Grim low fantasy)", "Mud, debt and hard choices.", "Premise and tone:\nNobody is a hero.",
+  for (const s of ["Campaign: Port Varrow", "Genre notes (Grim low fantasy)", "Mud, debt and hard choices.", "The GM's campaign guide:\nCampaign prompt:\nAgenda: fill the port with trouble.\n\nPrinciples: name everyone.\n\nPremise and tone:\nNobody is a hero.",
     "GM-only truths (players must never learn these from Public notes):\nBrandt cut the pages.",
     "1 | Mara Hoffmann | person | the innkeeper | Runs the Gilded Eel.", "2 | The Tallow Ring [GM only] | group | - | Smugglers.",
     "7 | Session 1: The cut pages [not published] | 2026-11-01 | They found the ledger.",
