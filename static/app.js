@@ -8393,8 +8393,9 @@
     // # is the page here, so it moves focus itself.
     $('.skip-link')?.addEventListener('click', e => { e.preventDefault(); const m = app(); m.focus(); m.scrollIntoView(); });
     $('#version').textContent = `GM's Almanac build ${APP_VERSION}`;
+    // On a phone the build goes on a line of its own, clear of the dice button (style.css, .foot-sep)
     $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ',
-      el('a', { href: 'privacy/', class: 'small' }, 'Privacy'), ' · ', el('a', { href: 'terms/', class: 'small' }, 'Terms'), ' · ');
+      el('a', { href: 'privacy/', class: 'small' }, 'Privacy'), ' · ', el('a', { href: 'terms/', class: 'small' }, 'Terms'), el('span', { class: 'foot-sep' }, ' · '));
     // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
     if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   }
