@@ -15,7 +15,7 @@ test.describe("without JavaScript", () => {
     for (const h of ["What we collect", "How we use it", "Who else sees it", "Google user data", "Your choices and rights", "Contact"])
       await expect(page.getByRole("heading", { name: h, exact: true })).toBeVisible();
     await expect(page.getByText("Limited Use requirements")).toBeVisible();
-    await expect(page.getByRole("link", { name: "privacy@gms-almanac.com" }).first()).toHaveAttribute("href", "mailto:privacy@gms-almanac.com");
+    await expect(page.getByRole("link", { name: "admin@gms-almanac.com" }).first()).toHaveAttribute("href", "mailto:admin@gms-almanac.com");
     await page.getByRole("link", { name: "Terms of service" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Terms of service" })).toBeVisible();
     await expect(page).toHaveURL(/\/terms\/$/);

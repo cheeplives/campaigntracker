@@ -1091,6 +1091,20 @@
     return tab === 'sheets' ? viewAdminSheets() : viewAdminUsers();
   }
   const adminHead = at => el('div', { class: 'card admin-head' }, el('h1', {}, 'Site Admin'), adminTabs(at));
+  /** Delete an account for good (the privacy policy promises it on request): first say which campaigns go with it, those
+   * it is the only GM of, then ask for DELETE typed out, as deleting a campaign does. false when nothing was deleted. */
+  async function eraseAccount(u) {
+    const who = u.display_name || u.email;
+    const { campaigns } = await api('user_erase_check', { query: { id: u.id } });
+    const n = campaigns.length;
+    const also = n ? ` ${n === 1 ? 'This campaign has' : `These ${n} campaigns have`} no other GM, so ${n === 1 ? 'it is' : 'they are'} deleted too, with everything in ${n === 1 ? 'it' : 'them'}: ${campaigns.map(c => c.name).join(', ')}. To keep one, make another member its GM first.` : '';
+    const typed = await promptDialog(`Type DELETE to delete ${who}'s account for good: their name, email, settings and problem reports, and their place in every campaign. What they wrote in other campaigns stays, without their name.${also} This can't be undone.`,
+      { title: 'Delete account', ok: 'Delete', danger: true });
+    if (typed === null) return false;
+    if (typed.trim().toUpperCase() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return false; }
+    await post('user_erase', { id: u.id, confirm: 'DELETE' });
+    toast(`Deleted ${who}'s account${n ? ` and ${n} campaign${n === 1 ? '' : 's'}` : ''}`);
+  }
   async function viewAdminUsers() {
     const { users } = await api('users');
     const act = (label, fn, cls, tipText) => btn(label, async () => {
@@ -1122,7 +1136,8 @@
                 : `Remove ${u.display_name || u.email} from GM's Almanac? They leave every campaign here, and signing in again puts them back in the queue.`,
                 { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
               await post('user_delete', { id: u.id });
-            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off GM\'s Almanac and out of its campaigns. Signing in again asks for access anew') : null))));
+            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off GM\'s Almanac and out of its campaigns. Signing in again asks for access anew') : null,
+            !self && !legacy && !Number(u.is_admin) ? act('Delete account', () => eraseAccount(u), 'danger', 'Delete their account and personal details for good, as when they ask') : null))));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
@@ -8378,8 +8393,9 @@
     // # is the page here, so it moves focus itself.
     $('.skip-link')?.addEventListener('click', e => { e.preventDefault(); const m = app(); m.focus(); m.scrollIntoView(); });
     $('#version').textContent = `GM's Almanac build ${APP_VERSION}`;
+    // On a phone the build goes on a line of its own, clear of the dice button (style.css, .foot-sep)
     $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ',
-      el('a', { href: 'privacy/', class: 'small' }, 'Privacy'), ' · ', el('a', { href: 'terms/', class: 'small' }, 'Terms'), ' · ');
+      el('a', { href: 'privacy/', class: 'small' }, 'Privacy'), ' · ', el('a', { href: 'terms/', class: 'small' }, 'Terms'), el('span', { class: 'foot-sep' }, ' · '));
     // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
     if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   }

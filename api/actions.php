@@ -26,6 +26,8 @@ const ACTIONS = [
     'user_status' => ['who' => 'admin'],
     'user_email' => ['who' => 'admin'],
     'user_delete' => ['who' => 'admin'],
+    'user_erase_check' => ['get' => true, 'who' => 'admin'],
+    'user_erase' => ['who' => 'admin'],
     'templates' => ['get' => true, 'who' => 'account'],
     'template' => ['get' => true, 'who' => 'account'],
     'template_save' => ['who' => 'account'],

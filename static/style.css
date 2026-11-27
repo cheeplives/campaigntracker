@@ -827,6 +827,8 @@ dialog.framer-dialog { width: min(400px, calc(100vw - 32px)); }
 /* The footer sits on the left, under the Legend on a campaign page, so the dice button and the back-to-top button
    (both fixed at the bottom right) never cover the About & sources link or the build number */
 .footer { max-width: 1180px; margin: 0 auto; padding: 8px 16px 24px; text-align: left; }
+/* on a phone the build number takes a line of its own under the links, so neither runs under the dice button */
+@media (max-width: 560px) { .footer .foot-sep { display: none; } .footer #version { display: table; margin-top: 4px; } }
 /* on a phone, room under the page for the dice button, so the last row of a page can always be scrolled out from under
    it (wider screens have the Legend's sticky rail, which would scroll away into extra room after the page) */
 @media (max-width: 560px) { body:has(.dice-fab:not([hidden])) .footer { padding-bottom: 140px; } }
