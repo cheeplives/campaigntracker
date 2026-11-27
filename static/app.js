@@ -7260,6 +7260,8 @@
         p('Open sources come first: Wikipedia articles (CC BY-SA 4.0, which in turn cite national weather services, NOAA, NASA and the like), ',
           'NASA, JPL and other US government pages (public domain), UK government statistics (Open Government Licence) and openly licensed papers. ',
           'Where a figure has no open source, such as the fictional settings, the source is still credited with its owner and terms, and this page says so under "No open source" at the bottom.'),
+        p('What GM\'s Almanac keeps about you, and who else sees it, is in the ', el('a', { href: 'privacy/' }, 'privacy policy'),
+          '; the rules for using it are in the ', el('a', { href: 'terms/' }, 'terms of service'), '.'),
         S.user ? null : el('p', {}, el('a', { href: '#/' }, 'Sign in'))),
       section('Travel planner: sample speeds',
         p('Each sample is the figure its source states, converted to km/h where it gives mph or knots. The label says when it is a top, cruising or free-flow speed rather than an average.'),
@@ -8376,7 +8378,8 @@
     // # is the page here, so it moves focus itself.
     $('.skip-link')?.addEventListener('click', e => { e.preventDefault(); const m = app(); m.focus(); m.scrollIntoView(); });
     $('#version').textContent = `GM's Almanac build ${APP_VERSION}`;
-    $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
+    $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ',
+      el('a', { href: 'privacy/', class: 'small' }, 'Privacy'), ' · ', el('a', { href: 'terms/', class: 'small' }, 'Terms'), ' · ');
     // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
     if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   }
