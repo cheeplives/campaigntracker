@@ -10,7 +10,7 @@ Players sign in with **Google or GitHub**, and new accounts wait for an admin to
 
 ## Install
 
-The full runbook (a server of your own, DNS, HTTPS, OAuth apps, config fields, moving an existing install) is in [docs/DEPLOY.md](docs/DEPLOY.md). In short:
+The full runbook (DreamHost shared hosting: the website, DNS, HTTPS, OAuth apps, config fields, moving an existing install) is in [docs/DEPLOY.md](docs/DEPLOY.md). In short:
 
 1. **Create a MySQL database** of its own, for GM's Almanac only.
 2. **Deploy with git:** `git clone https://github.com/cheeplives/campaigntracker.git` as the site's web root (it runs at the root of its own domain, or in a folder). Updates are `./deploy.sh` (pull, PHP syntax check, database upgrade).

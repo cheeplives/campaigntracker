@@ -1,7 +1,7 @@
 <?php
 /**
  * export-site.php — copy GM's Almanac's data out of its current database into one .sql file, to load into the
- * database of a new site (see docs/DEPLOY.md, "Moving an existing install"). Run on the OLD server from the
+ * database of a new site (see docs/DEPLOY.md, steps 4 and 6). Run on the OLD server from the
  * deployed directory:
  *
  *   php tools/export-site.php              write the copy to ~/gms-almanac-export-<date>.sql

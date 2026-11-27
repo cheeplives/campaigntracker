@@ -1,209 +1,139 @@
-# Deploying GM's Almanac at gms-almanac.com
+# Deploying GM's Almanac at gms-almanac.com (DreamHost shared hosting)
 
-A step-by-step runbook for running GM's Almanac on a server of your own at `https://gms-almanac.com`, as a site of its
-own: its own database, its own accounts and approvals, and its own Google and GitHub sign-in apps. Nothing in it is
-shared with Sinless or any other app.
+A step-by-step runbook for running GM's Almanac at `https://gms-almanac.com` on DreamHost shared hosting, as a site of
+its own: its own address, its own Google and GitHub sign-in apps, and a database that holds only GM's Almanac. Nothing
+in it is shared with Sinless or any other app.
 
-It covers a new install and moving an existing install (for example the old one at
-`https://www.discreteinfinity.com/chronicle/`) across with all its campaigns, accounts and uploads.
+It covers moving the existing install (`https://www.discreteinfinity.com/chronicle/`) across with all its campaigns,
+accounts and uploads, and a new, empty install. Other shared hosts with PHP 8, MySQL, SSH and Apache work the same
+way; only the panel's menus differ.
 
-The steps are written for a small Linux server you run yourself (a VPS on Ubuntu 24.04 LTS). If you'd rather put
-it on shared hosting such as DreamHost, follow [On shared hosting instead](#on-shared-hosting-instead): the app is
-the same, only steps 2 to 5 change.
+**The short version.** If gms-almanac.com is added under the **same DreamHost website user** as the old site, both
+sites' folders sit in that user's home folder. The config (`~/chronicle-config.php`), the uploads
+(`~/.chronicle-uploads`) and the sign-in sessions are already where the new site looks for them, so nothing has to be
+copied. You clone the code into the new folder, change a few lines of the config, and turn the old folder into a
+redirect. The database is kept as it is too, unless it is shared with Sinless (step 4 tells you which).
 
 **Contents**
 
-1. [What you need](#1-what-you-need)
-2. [Point the domain at the server (DNS)](#2-point-the-domain-at-the-server-dns)
-3. [Install the server software](#3-install-the-server-software)
-4. [Get the code](#4-get-the-code)
-5. [Apache and HTTPS](#5-apache-and-https)
-6. [Create the database](#6-create-the-database)
-7. [Register the sign-in apps (Google and GitHub)](#7-register-the-sign-in-apps-google-and-github)
-8. [Write the config](#8-write-the-config)
-9. [Create the tables, or move your existing data](#9-create-the-tables-or-move-your-existing-data)
-10. [Check it works](#10-check-it-works)
-11. [After a move: the old address, players and tools](#11-after-a-move-the-old-address-players-and-tools)
-12. [Updates](#12-updates)
-13. [Backups](#13-backups)
-14. [Email (optional)](#14-email-optional)
-- [On shared hosting instead](#on-shared-hosting-instead)
+1. [Before you start](#1-before-you-start)
+2. [Add the website, its DNS and its certificate](#2-add-the-website-its-dns-and-its-certificate)
+3. [Put the code in the new folder](#3-put-the-code-in-the-new-folder)
+4. [The database: keep it, or copy GM's Almanac out of a shared one](#4-the-database-keep-it-or-copy-gms-almanac-out-of-a-shared-one)
+5. [Register the sign-in apps (Google and GitHub)](#5-register-the-sign-in-apps-google-and-github)
+6. [Switch over](#6-switch-over)
+7. [Check it works](#7-check-it-works)
+8. [Tell your players](#8-tell-your-players)
+9. [Tidy up, a few weeks later](#9-tidy-up-a-few-weeks-later)
+10. [Updates](#10-updates)
+11. [Backups](#11-backups)
+12. [Email (optional)](#12-email-optional)
+- [A new, empty site](#a-new-empty-site)
+- [If the new site is under a different DreamHost user](#if-the-new-site-is-under-a-different-dreamhost-user)
 - [Behind a CDN or proxy](#behind-a-cdn-or-proxy)
 - [Troubleshooting](#troubleshooting)
-- [Upgrading an install from before Google/GitHub sign-in](#upgrading-an-install-from-before-googlegithub-sign-in)
 
-Throughout, `josh` is the account you sign in to the server with, and `203.0.113.10` stands for the server's address.
-Swap in your own.
+Throughout, `you` stands for the DreamHost website user the old site runs under (the one you SSH in as), and the old
+install is `~/discreteinfinity.com/chronicle` (DreamHost's usual folder is named after the domain; use whatever yours
+is called, such as `~/www.discreteinfinity.com/chronicle` or `~/public_html/chronicle`).
 
 ---
 
-## 1. What you need
+## 1. Before you start
 
-- **The domain** `gms-almanac.com`, at whichever registrar you bought it from, with access to its DNS settings.
-- **A server.** Any VPS provider will do (Hetzner, DigitalOcean, Linode, Vultr…). For a handful of tables of players,
-  the smallest plan is plenty: 1 vCPU, 1–2 GB of memory, 25 GB of disk, plus room for uploads (each campaign may hold
-  up to 500 MB by default). Pick **Ubuntu 24.04 LTS** and add your SSH key when you create it.
-- **Software** (installed in step 3): Apache 2.4 with `mod_rewrite`, `mod_headers` and `mod_alias`; PHP 8.1 or newer
-  (8.3 on Ubuntu 24.04) with `pdo_mysql`, `curl`, `mbstring` and `xml` (`intl` is optional, for accent-free map
-  searches); MySQL 8.0 (or MariaDB 10.3+); `git`; Certbot for the HTTPS certificate.
-- **Accounts** at Google Cloud and GitHub, to register the sign-in apps (step 7).
+- **Merge this version** and update the old site to it, so the export tool is there and the database is current:
 
-Apache is the web server to use: the app's `.htaccess` files carry its HTTPS redirect, its security headers and the
-rules that keep the config, `db/`, `tools/`, `tests/` and `.git` from ever being served.
+  ```sh
+  ssh you@discreteinfinity.com
+  cd ~/discreteinfinity.com/chronicle
+  ./deploy.sh
+  ```
 
-## 2. Point the domain at the server (DNS)
+- **The domain** `gms-almanac.com`, registered at DreamHost or elsewhere, with access to its DNS settings.
+- **SSH access.** In the panel, *Websites → SFTP Users & Files*: the website user must be a *Shell* user (not SFTP
+  only) for `git`, `php` and `mysql` on the command line.
+- **Accounts** at Google Cloud and GitHub, to register the new sign-in apps (step 5).
+- **A note of the old config's database settings:** `grep -A6 "'db'" ~/chronicle-config.php` (host, name, user).
 
-At your registrar (or wherever the domain's DNS is hosted), add:
+Nothing in steps 1 to 5 affects the old site: players can keep using it until the switch in step 6, which takes a
+few minutes.
 
-| Type    | Name | Value                         | TTL |
-|---------|------|-------------------------------|-----|
-| `A`     | `@`  | `203.0.113.10` (server IPv4)  | 300 |
-| `AAAA`  | `@`  | the server's IPv6, if it has one | 300 |
-| `CNAME` | `www`| `gms-almanac.com.`            | 300 |
+## 2. Add the website, its DNS and its certificate
 
-Remove any parking-page `A` records or URL forwards the registrar added. A short TTL (300 seconds) makes a mistake
-quick to fix; raise it to 3600 once all is well.
+1. In the panel, **Websites → Manage Websites → Add Website**. Domain `gms-almanac.com`, hosting type *Fully hosted*
+   (on your shared plan). Under *Run this site as user*, pick **the same user as the old site**. Leave the web
+   directory as DreamHost suggests: `/home/you/gms-almanac.com`.
+2. On the new site's *Manage* page: set **PHP** to the newest 8.x DreamHost offers (8.1 or newer). If there's a
+   *www* setting, choose **Remove www** (`gms-almanac.com`), so there is one address: sign-in cookies and the
+   installed app are tied to it.
+3. **DNS.**
+   - Registered at DreamHost: nothing to do; its DNS is set up when you add the website.
+   - Registered elsewhere: at your registrar, change the domain's nameservers to `ns1.dreamhost.com`,
+     `ns2.dreamhost.com` and `ns3.dreamhost.com`. (Or keep your registrar's DNS and add the `A` and `AAAA` records the
+     panel shows under *Websites → DNS* for gms-almanac.com, plus a `CNAME` from `www` to `gms-almanac.com`.)
 
-Check from your own computer (it can take a few minutes, rarely a few hours):
+   It can take a few hours to reach everyone. Check from your computer: `dig +short gms-almanac.com` gives the same
+   address the panel shows.
+4. **HTTPS.** *Websites → Secure Certificates*: add the free **Let's Encrypt** certificate for gms-almanac.com (it is
+   often added by itself with the website). It needs the DNS from step 3 working first, and renews itself.
+
+The app's `.htaccess` forces HTTPS itself, so there's no need to turn on the panel's "force HTTPS" option as well
+(leaving it on does no harm).
+
+## 3. Put the code in the new folder
+
+DreamHost puts a placeholder page in the new folder. Replace it with a checkout of the app:
 
 ```sh
-dig +short gms-almanac.com          # → 203.0.113.10
-dig +short www.gms-almanac.com      # → gms-almanac.com. then 203.0.113.10
+ssh you@discreteinfinity.com          # the same user; the new domain works too once its DNS is through
+cd ~
+ls gms-almanac.com                     # only DreamHost's placeholder (index.html, maybe favicon.ico)
+rm -rf gms-almanac.com
+git clone https://github.com/cheeplives/campaigntracker.git gms-almanac.com
 ```
 
-Certbot (step 5) needs these to answer before it can issue the certificate.
-
-## 3. Install the server software
-
-Sign in (`ssh root@203.0.113.10`, or the user your provider set up) and run:
+For larger uploads, put a `.user.ini` in the new folder (DreamHost reads it; the default limit is often 2 MB, and
+the app allows 10 MB a file):
 
 ```sh
-# Your own login, if the provider only gave you root
-adduser josh && usermod -aG sudo josh
-rsync --archive --chown=josh:josh ~/.ssh /home/josh     # copy your SSH key across
-# from here on, sign in as josh
-
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y apache2 libapache2-mod-php php8.3 php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml \
-  php8.3-intl mysql-server git certbot python3-certbot-apache unattended-upgrades
-sudo a2enmod rewrite headers alias
-sudo usermod -aG www-data josh       # so you can read the config the web server reads; sign out and in again
-
-# Firewall: SSH and the web only. MySQL stays on localhost, which is Ubuntu's default.
-sudo ufw allow OpenSSH
-sudo ufw allow 'Apache Full'
-sudo ufw enable
-
-# Security updates install by themselves
-sudo dpkg-reconfigure -plow unattended-upgrades
-```
-
-Check PHP: `php -v` (8.1 or newer) and `php -m | grep -Ei 'pdo_mysql|curl|mbstring|xml'` (all four listed).
-
-Then raise PHP's upload limits to match the app's (10 MB a file by default). Ubuntu's are 2 MB:
-
-```sh
-sudo tee /etc/php/8.3/apache2/conf.d/90-gms-almanac.ini >/dev/null <<'EOF'
+cat > ~/gms-almanac.com/.user.ini <<'EOF'
 upload_max_filesize = 10M
 post_max_size = 12M
-expose_php = Off
 EOF
 ```
 
-## 4. Get the code
+If the old folder has a `.user.ini` or `phprc` of its own, copy what's in it instead. Nothing else is needed yet: the
+new folder finds `~/chronicle-config.php` (one level above it) by itself, and with it the old database, uploads and
+sessions. Until step 6, the config still says the old address, so leave the new site alone until then.
 
-The site's folder is `/var/www/gms-almanac`, and everything private sits beside it, outside what the web server
-serves:
+## 4. The database: keep it, or copy GM's Almanac out of a shared one
 
-```
-/var/www/gms-almanac/          the app (a git checkout), the web root
-/var/www/chronicle-config.php  the config, one level above the web root, where the app looks for it
-/var/lib/gms-almanac/uploads   pictures and files people upload
-/var/lib/gms-almanac/sessions  sign-in sessions
-/var/backups/gms-almanac       database copies made before each upgrade
-```
+Find out which case you're in, on the old site:
 
 ```sh
-sudo mkdir -p /var/www/gms-almanac
-sudo chown josh:www-data /var/www/gms-almanac
-git clone https://github.com/cheeplives/campaigntracker.git /var/www/gms-almanac
-
-sudo mkdir -p /var/lib/gms-almanac/uploads /var/lib/gms-almanac/sessions
-sudo chown -R www-data:www-data /var/lib/gms-almanac
-sudo chmod -R 700 /var/lib/gms-almanac
-
-sudo mkdir -p /var/backups/gms-almanac
-sudo chown josh:josh /var/backups/gms-almanac && sudo chmod 700 /var/backups/gms-almanac
+cd ~/discreteinfinity.com/chronicle
+php tools/export-site.php --check
 ```
 
-The checkout is yours (`josh`), readable by Apache through the `www-data` group. Apache never needs to write to it.
+**It says "…GM's Almanac tables, nothing else."** The database is GM's Almanac's alone. **Keep it**: the new site
+uses it as it is, so there's no data to move, and nothing made on the old site before the switch is lost. Skip to
+step 5.
 
-## 5. Apache and HTTPS
+**It lists tables "that belong to something else".** The database is shared with Sinless (or something else). Give
+GM's Almanac a database of its own:
 
-Create the site:
+1. In the panel, **Advanced → MySQL Databases → Add new database**. Database name `gms_almanac`, a hostname such as
+   `mysql.gms-almanac.com` (pick it from the list or make a new one), a new user `gms_almanac` and a long password
+   (`openssl rand -base64 24`). It takes a few minutes before the hostname answers.
+2. Leave the copy itself for the switch in step 6, so nothing made on the old site in the meantime is left behind.
+   It's two commands there.
 
-```sh
-sudo tee /etc/apache2/sites-available/gms-almanac.conf >/dev/null <<'EOF'
-<VirtualHost *:80>
-  ServerName gms-almanac.com
-  ServerAlias www.gms-almanac.com
-  DocumentRoot /var/www/gms-almanac
+The tool copies only GM's Almanac's own tables (the ones `db/schema.sql` creates), so Sinless's tables stay behind.
+The accounts table is shared too: by default only GM's Almanac's accounts go (anyone with access here, older accounts
+from before Google/GitHub sign-in, and anyone something of ours points to). Add `--all-users` to copy every account.
+Nothing in the shared database is changed.
 
-  <Directory /var/www/gms-almanac>
-    Options -Indexes +FollowSymLinks
-    AllowOverride All
-    Require all granted
-  </Directory>
-
-  ErrorLog ${APACHE_LOG_DIR}/gms-almanac-error.log
-  CustomLog ${APACHE_LOG_DIR}/gms-almanac-access.log combined
-</VirtualHost>
-EOF
-sudo a2ensite gms-almanac
-sudo a2dissite 000-default
-sudo apache2ctl configtest && sudo systemctl reload apache2
-```
-
-`AllowOverride All` matters: without it Apache ignores the app's `.htaccess`, and with it the HTTPS redirect, the
-headers and the blocked folders.
-
-Then get the certificate. Certbot (Let's Encrypt, free) writes the HTTPS site for you and renews it by itself:
-
-```sh
-sudo certbot --apache -d gms-almanac.com -d www.gms-almanac.com --redirect
-sudo certbot renew --dry-run          # proves renewal works
-```
-
-Last, send `www.` to the bare domain, so there is one address (sign-in cookies and the installed app are tied to
-it). Open the HTTPS site Certbot made, `/etc/apache2/sites-available/gms-almanac-le-ssl.conf`, and add inside its
-`<VirtualHost *:443>`:
-
-```apache
-  RewriteEngine On
-  RewriteCond %{HTTP_HOST} ^www\. [NC]
-  RewriteRule ^ https://gms-almanac.com%{REQUEST_URI} [R=301,L]
-```
-
-then `sudo apache2ctl configtest && sudo systemctl reload apache2`.
-
-## 6. Create the database
-
-```sh
-sudo mysql
-```
-
-```sql
-CREATE DATABASE gms_almanac CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'gms_almanac'@'localhost' IDENTIFIED BY 'a-long-random-password';
-GRANT ALL PRIVILEGES ON gms_almanac.* TO 'gms_almanac'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-Make the password with `openssl rand -base64 24` and keep it for the config. The app's user needs every privilege on
-its own database (the upgrades create and alter tables) and none anywhere else.
-
-## 7. Register the sign-in apps (Google and GitHub)
+## 5. Register the sign-in apps (Google and GitHub)
 
 GM's Almanac gets sign-in apps of its own, named GM's Almanac, so the consent screen people see says so. The
 callback for both is:
@@ -230,120 +160,88 @@ https://gms-almanac.com/api/auth/callback.php
   `https://gms-almanac.com/api/auth/callback.php`. Then *Generate a new client secret*, and copy the client ID and
   secret.
 
-Leave either one out of the config and its button doesn't show.
-
 Accounts are matched by the provider's own id for the person (Google's account id, GitHub's user id), never by the
-app that asked, so someone moved from the old install keeps their account and campaigns when they sign in through the
-new apps.
+app that asked, so everyone keeps their account and campaigns when they sign in through the new apps. Keep the old
+apps until the switch is done; delete them in step 9 (unless Sinless uses them).
 
-## 8. Write the config
+## 6. Switch over
+
+Pick a quiet time. Everything here takes a few minutes, and the old address sends people to the new one as soon as
+it's done.
+
+**a. Back up the config first:**
 
 ```sh
-cd /var/www/gms-almanac
-cp api/config.example.php /var/www/chronicle-config.php
-sudo chown josh:www-data /var/www/chronicle-config.php
-chmod 640 /var/www/chronicle-config.php
-nano /var/www/chronicle-config.php
+cp ~/chronicle-config.php ~/chronicle-config.php.before-move && chmod 600 ~/chronicle-config.php.before-move
 ```
 
-The app looks for its config in this order: the `$CHRONICLE_CONFIG` environment variable, `chronicle-config.php` one
-level above the web root (that's this one), `~/chronicle-config.php`, then `api/config.php`. Every setting is
-explained in the file. Set at least:
+**b. Only if the database is shared (step 4): copy GM's Almanac into its new database.**
+
+```sh
+cd ~/discreteinfinity.com/chronicle
+php tools/export-site.php
+# → Export: wrote /home/you/gms-almanac-export-20261127-180000.sql (4.2 MB). Only your account can read it.
+mysql -h mysql.gms-almanac.com -u gms_almanac -p gms_almanac < ~/gms-almanac-export-*.sql
+```
+
+Load it only into the new, empty database.
+
+**c. Edit the config** (`nano ~/chronicle-config.php`):
+
+```php
+'base_url' => 'https://gms-almanac.com',          // no trailing slash
+'oauth' => [
+  'google' => ['client_id' => 'the new Google client id', 'client_secret' => '…'],
+  'github' => ['client_id' => 'the new GitHub client id', 'client_secret' => '…'],
+],
+```
+
+and, only if you made a new database in step 4:
 
 ```php
 'db' => [
-  'host' => '127.0.0.1', 'port' => 3306,
-  'name' => 'gms_almanac', 'user' => 'gms_almanac', 'password' => 'the password from step 6',
+  'host' => 'mysql.gms-almanac.com', 'port' => 3306,
+  'name' => 'gms_almanac', 'user' => 'gms_almanac', 'password' => 'the new password',
   'charset' => 'utf8mb4',
 ],
-'base_url' => 'https://gms-almanac.com',          // no trailing slash
-'oauth' => [
-  'google' => ['client_id' => '…', 'client_secret' => '…'],
-  'github' => ['client_id' => '…', 'client_secret' => '…'],
-],
-'admin_identities' => ['you@gmail.com'],          // the email you sign in with, or 'github:<your id>'
-'session' => [
-  // …keep the rest as it is, and set:
-  'save_path' => '/var/lib/gms-almanac/sessions',
-],
-'uploads' => ['path' => '/var/lib/gms-almanac/uploads', 'max_mb' => 10, 'campaign_mb' => 500, 'user_mb' => 1000],
-'backups' => ['path' => '/var/backups/gms-almanac'],
-'image_search' => ['contact' => 'https://gms-almanac.com', /* …keys as before, if you had any */],
 ```
 
-If you're moving an existing install, copy across from the old config whatever else you had set: the Find Image keys
-(`image_search`), `approval_webhook_url`, `approval_email`, `github_reports`, `fan_wikis` and `limits`. Keep
-`debug` and `allow_install` at `false`.
+While you're there, check these say GM's Almanac's own things: `approval_email.from` (an address on
+gms-almanac.com; see step 12), `image_search.contact` (`https://gms-almanac.com`) and `approval_webhook_url`. Keep
+`debug` and `allow_install` at `false`, and everything else as it was.
 
-## 9. Create the tables, or move your existing data
-
-### A new, empty site
+**d. Turn the old folder into a redirect.** Old bookmarks, invitation links and panel links then open the same page
+on the new site:
 
 ```sh
-cd /var/www/gms-almanac
+cd ~/discreteinfinity.com
+mv chronicle chronicle-old
+mkdir chronicle
+cat > chronicle/.htaccess <<'EOF'
+RewriteEngine On
+RewriteRule ^(.*)$ https://gms-almanac.com/$1 [R=301,L,QSA]
+EOF
+chmod 700 chronicle-old              # nothing in it is served any more
+```
+
+`https://www.discreteinfinity.com/chronicle/#/c/12` now opens `https://gms-almanac.com/#/c/12`.
+
+**e. Bring the new site up to date** (it does nothing when it already is) and run the security check:
+
+```sh
+cd ~/gms-almanac.com
 php tools/migrate.php
+php tools/security-check.php
 ```
 
-It creates every table and says *Database: up to date*. Go on to step 10.
-
-### Moving the existing install (with its campaigns, accounts and uploads)
-
-The data comes over as it is: campaigns, days, notes, sheets, maps, Encyclopedia entries, accounts and who is
-approved, panel links and API keys. Do it at a quiet time; it takes a few minutes. Anything changed on the old site
-after the export would be left behind, so ask your players to stay off it for that while, or do step 11's redirect
-first.
-
-**On the old server**, first pull this version, so the export tool is there, and bring that database up to date:
+## 7. Check it works
 
 ```sh
-cd ~/public_html/chronicle        # wherever the old install lives
-./deploy.sh
-php tools/export-site.php --check
-```
-
-`--check` says which database it reads, how many of GM's Almanac's tables it found and how many accounts will go.
-If the old database is (or once was) shared with Sinless, it says so too: only GM's Almanac's own tables are copied
-(the ones `db/schema.sql` creates), Sinless's stay behind, and of the shared accounts only GM's Almanac's go (anyone
-with access here, older accounts from before Google/GitHub sign-in, and anyone something of ours points to). Add
-`--all-users` to copy every account instead. Nothing on the old site is changed either way.
-
-Then make the copy:
-
-```sh
-php tools/export-site.php
-# → Export: wrote /home/you/gms-almanac-export-20261127-180000.sql (4.2 MB). Only your account can read it.
-```
-
-**Copy it and the uploads to the new server.** From the old server (its uploads are in `~/.chronicle-uploads` unless
-its config's `uploads.path` says otherwise):
-
-```sh
-scp ~/gms-almanac-export-*.sql josh@gms-almanac.com:/var/backups/gms-almanac/
-rsync -av ~/.chronicle-uploads/ josh@gms-almanac.com:/tmp/almanac-uploads/
-```
-
-**On the new server**, load the copy into the empty database, put the uploads in place and run the upgrade (which
-does nothing when the two run the same version):
-
-```sh
-mysql -u gms_almanac -p gms_almanac < /var/backups/gms-almanac/gms-almanac-export-*.sql
-sudo rsync -a /tmp/almanac-uploads/ /var/lib/gms-almanac/uploads/ && rm -rf /tmp/almanac-uploads
-sudo chown -R www-data:www-data /var/lib/gms-almanac/uploads
-cd /var/www/gms-almanac && php tools/migrate.php
-```
-
-Load it only into the new, empty database. Everyone will need to sign in once on the new address: sessions don't
-carry over.
-
-## 10. Check it works
-
-```sh
-cd /var/www/gms-almanac
-php tools/security-check.php        # names anything that must not stay that way on a live site; changes nothing
 curl -s https://gms-almanac.com/api/auth/me.php
 #   → {"error":"not_authenticated","providers":["google","github"]}
 curl -sI http://gms-almanac.com/ | head -1                           # → 301, to https
 curl -sI https://www.gms-almanac.com/ | grep -i location             # → https://gms-almanac.com/
+curl -sI https://www.discreteinfinity.com/chronicle/ | grep -i location   # → https://gms-almanac.com/
 curl -sI https://gms-almanac.com/api/config.php | head -1            # → 403 or 404
 curl -sI https://gms-almanac.com/api/lib.php | head -1               # → 403 (only index.php and api/auth/ run)
 curl -sI https://gms-almanac.com/tests/support/login.php | head -1   # → 404
@@ -353,42 +251,19 @@ curl -sI https://gms-almanac.com/manifest.webmanifest | grep -i content-type   #
 
 Then in a browser:
 
-1. Open `https://gms-almanac.com` and sign in with your `admin_identities` account. You land approved, with
-   **Site Admin** under your name. After a move, your campaigns are all there.
-2. Open a campaign, a day page, and an Encyclopedia entry with a picture (after a move, this proves the uploads came
-   across).
-3. Have a second account sign in. On a new site it waits for approval: approve it under **Site Admin → Users**, then
-   add it to a campaign from the campaign's **Members** tab.
-4. Open **About & sources** to see every data source listed.
+1. Open `https://gms-almanac.com` and sign in with your `admin_identities` account. Your campaigns are all there,
+   and **Site Admin** is under your name.
+2. Open a campaign, a day page, and an Encyclopedia entry with a picture (proving the uploads are found).
+3. Open **About & sources** to see every data source listed.
 
-## 11. After a move: the old address, players and tools
+**If something's wrong**, put the old site back while you look: `cd ~/discreteinfinity.com && rm -rf chronicle &&
+mv chronicle-old chronicle && cp ~/chronicle-config.php.before-move ~/chronicle-config.php`. Nothing in the
+database was changed by the move.
 
-**Send the old address to the new one.** On the old server, once the new site checks out, replace the old install
-with a redirect, so bookmarks, invitations and panel links keep working:
-
-```sh
-cd ~/public_html
-mv chronicle chronicle-old-$(date +%Y%m%d)       # keep it a while, out of the way
-mkdir chronicle
-cat > chronicle/.htaccess <<'EOF'
-RewriteEngine On
-RewriteRule ^(.*)$ https://gms-almanac.com/$1 [R=301,L,QSA]
-EOF
-```
-
-`https://www.discreteinfinity.com/chronicle/#/c/12` then opens `https://gms-almanac.com/#/c/12`. Move the old
-config (`~/chronicle-config.php`) somewhere safe, or delete it once you no longer need it, so nothing on the old site
-can reach the database. Once you're sure of the new site (a few weeks), delete `chronicle-old-*` and the old uploads
-folder.
-
-**The old database.** If it was GM's Almanac's alone, drop it once you're sure. If it is Sinless's database too,
-**don't drop it**: drop only GM's Almanac's tables, and keep `users` and `rate_limits`, which Sinless uses. The list
-is in `db/schema.sql` (`grep -oP 'CREATE TABLE IF NOT EXISTS \K\w+' db/schema.sql`); make a backup first.
-
-**Tell your players:**
+## 8. Tell your players
 
 - The new address, `https://gms-almanac.com`, and that they sign in once there with the same Google or GitHub
-  account as before.
+  account as before (sessions don't carry over to a new address).
 - If they installed the app (Chrome's *Install*, or *Add to Home Screen* on an iPad), remove the old one and install
   it again from the new address: an installed app belongs to its address.
 - GMs who use **Foundry VTT** with the GM's Almanac Bridge module: change *GM's Almanac address* in the module's
@@ -397,19 +272,32 @@ is in `db/schema.sql` (`grep -oP 'CREATE TABLE IF NOT EXISTS \K\w+' db/schema.sq
 - GMs who added the panel to **Owlbear Rodeo**: remove the extension and add it again from the new address. Panel
   links in a virtual tabletop's frame or a stream follow the redirect, but are best replaced with the new address.
 
-## 12. Updates
+## 9. Tidy up, a few weeks later
+
+Once you're sure of the new site:
+
+- Delete `~/discreteinfinity.com/chronicle-old` and `~/chronicle-config.php.before-move`. Keep the redirect folder
+  for as long as old links may be about (a year costs nothing).
+- Delete the old Google redirect URI or GitHub OAuth app GM's Almanac used, **unless Sinless uses them**.
+- **If you made a new database in step 4:** delete `~/gms-almanac-export-*.sql`, and drop GM's Almanac's tables from
+  the shared database, keeping `users` and `rate_limits`, which Sinless uses. Back that database up first (the
+  panel, or `mysqldump`). The list of GM's Almanac's tables:
+  `grep -oP 'CREATE TABLE IF NOT EXISTS \K\w+' ~/gms-almanac.com/db/schema.sql | grep -vx 'users\|rate_limits'`.
+  **Never drop the shared database itself.**
+
+## 10. Updates
 
 ```sh
-cd /var/www/gms-almanac
+cd ~/gms-almanac.com
 ./deploy.sh        # git pull --ff-only, php -l, tools/migrate.php, then tools/security-check.php
 ```
 
 Database upgrades need nothing from you: after the pull, deploy.sh runs `php tools/migrate.php`, which looks for
 anything new under `db/migrations/` (each step checks for its table or column, so it never runs twice) and does
 nothing when there isn't. When there is, it first saves a copy of the database with `mysqldump` to
-`/var/backups/gms-almanac/` (the config's `backups.path`; only your account can read it; the last 5 are kept), then
-runs the migrations and lists what changed. If the backup or a migration fails, deploy.sh ends with *NOT done* and
-says why; fix that and run `php tools/migrate.php` again.
+`~/chronicle-backups/` (only your account can read it; the last 5 are kept; set `'backups' => ['path' => ...]` in the
+config to move it), then runs the migrations and lists what changed. If the backup or a migration fails, deploy.sh
+ends with *NOT done* and says why; fix that and run `php tools/migrate.php` again.
 
 The app expects every migration to have run. Until they have, every page answers *This GM's Almanac database needs
 an upgrade* instead of half working, so run `php tools/migrate.php` and reload.
@@ -419,75 +307,85 @@ an upgrade* instead of half working, so run `php tools/migrate.php` and reload.
 
 `allow_install` can stay `false` for good: install.php is only for hosts where you can't run commands.
 
-## 13. Backups
+## 11. Backups
 
-The upgrade copies only cover upgrades. Back up every night, and keep a copy somewhere other than this server.
-Root's crontab can read both the database (Ubuntu's MySQL lets root in without a password) and the uploads:
+DreamHost keeps its own backups of your files and databases, but they're for its emergencies, not a promise. Keep
+copies of your own, and somewhere other than DreamHost now and then.
+
+In the panel, **Advanced → Cron Jobs → Add new cron job**, as your user, daily, with this command (one line):
 
 ```sh
-sudo crontab -e
+cd ~ && mysqldump --defaults-extra-file=$HOME/.gms-almanac.cnf --single-transaction --no-tablespaces gms_almanac | gzip > ~/chronicle-backups/nightly-$(date +\%a).sql.gz && tar -czf ~/chronicle-backups/uploads-$(date +\%a).tar.gz .chronicle-uploads
 ```
 
-```cron
-# 03:15 every night: the database and the uploads, one copy per weekday (so a week's worth)
-15 3 * * * mysqldump --single-transaction --no-tablespaces gms_almanac | gzip > /var/backups/gms-almanac/nightly-$(date +\%a).sql.gz
-30 3 * * * tar -czf /var/backups/gms-almanac/uploads-$(date +\%a).tar.gz -C /var/lib/gms-almanac uploads
+with the database's login in a file only you can read (use the old database's host, name, user and password if you
+kept it in step 4, and put that name in place of `gms_almanac` in the command):
+
+```sh
+mkdir -p ~/chronicle-backups && chmod 700 ~/chronicle-backups
+cat > ~/.gms-almanac.cnf <<'EOF'
+[client]
+host=mysql.gms-almanac.com
+user=gms_almanac
+password="the database password"
+EOF
+chmod 600 ~/.gms-almanac.cnf
 ```
 
-Then copy `/var/backups/gms-almanac` off the server: your VPS provider's backup option, `rclone` to cloud storage, or
-`rsync` to a computer at home. To restore: load the `.sql` into an empty database as in step 9
-(`gunzip -c nightly-Mon.sql.gz | mysql -u gms_almanac -p gms_almanac`), and unpack the uploads into
-`/var/lib/gms-almanac/`.
+That keeps one copy for each weekday. Now and then download `~/chronicle-backups` to your computer (SFTP, or
+`rsync -av you@gms-almanac.com:chronicle-backups/ ./almanac-backups/`). To restore: load a `.sql` into an empty
+database (`gunzip -c nightly-Mon.sql.gz | mysql -h … -u … -p …`), and unpack the uploads into your home folder.
 
-## 14. Email (optional)
+## 12. Email (optional)
 
 The app can email people when you approve or revoke them, and email campaign invitations (`approval_email` in the
-config). It uses PHP's `mail()`, which on a fresh VPS has nothing to send through, and mail sent straight from a VPS
-is mostly marked as spam. To turn it on:
+config). On DreamHost, PHP's `mail()` works, but mail is only delivered reliably when it comes from the site's own
+domain:
 
-1. Sign up with a sending service (Amazon SES, Postmark, Mailgun, Brevo, Fastmail…) and verify `gms-almanac.com`
-   there: it gives you the SPF, DKIM and DMARC DNS records to add at your registrar.
-2. Install `msmtp-mta` (`sudo apt install msmtp-mta`) and point `/etc/msmtprc` at the service's SMTP server with its
-   username and password. PHP's `mail()` then sends through it.
-3. In the config: `'approval_email' => ['enabled' => true, 'from' => "GM's Almanac <noreply@gms-almanac.com>", …]`.
+1. In the panel, **Mail → Manage Email**: create `noreply@gms-almanac.com` (or just make sure the domain's mail is
+   hosted at DreamHost, which sets up SPF and DKIM for it).
+2. In the config: `'approval_email' => ['enabled' => true, 'from' => "GM's Almanac <noreply@gms-almanac.com>", …]`.
 
 Left off, nothing breaks: a GM copies an invitation's link from the Members tab instead. For a ping when someone new
-asks for access, `approval_webhook_url` takes a Discord or Slack webhook, with no email set-up at all.
+asks for access, `approval_webhook_url` takes a Discord or Slack webhook.
 
 ---
 
-## On shared hosting instead
+## A new, empty site
 
-The app runs the same on shared hosting with PHP and MySQL (DreamHost, for example). Instead of steps 2 to 5:
+For a fresh install with no data to bring over, follow steps 2, 3 and 5, then:
 
-1. In the host's panel, add `gms-almanac.com` as a **fully hosted** domain (DreamHost: *Websites → Add website*).
-   The panel gives it a folder, such as `~/gms-almanac.com`. Choose PHP 8.1 or newer.
-2. Point the domain's DNS at the host: either use the host's nameservers at your registrar, or add the `A`/`AAAA`
-   records the panel shows.
-3. Turn on the panel's free Let's Encrypt certificate for the domain, and its *www → non-www* option if it has one.
-4. Create a MySQL database and user in the panel (one for GM's Almanac alone), and note the host name it gives
-   (DreamHost's is like `mysql.gms-almanac.com`, not `127.0.0.1`).
-5. Over SSH, put the code in the domain's folder:
+1. Make a database in the panel (step 4's *Add new database*).
+2. Write the config, one level above the site's folder:
 
    ```sh
-   cd ~ && rm -rf gms-almanac.com && git clone https://github.com/cheeplives/campaigntracker.git gms-almanac.com
-   cp gms-almanac.com/api/config.example.php ~/chronicle-config.php && chmod 600 ~/chronicle-config.php
-   mkdir -p ~/.chronicle-uploads && chmod 700 ~/.chronicle-uploads
+   cp ~/gms-almanac.com/api/config.example.php ~/chronicle-config.php && chmod 600 ~/chronicle-config.php
+   nano ~/chronicle-config.php
    ```
 
-   The config in your home folder is one level above the web root, where the app looks. Leave `session.save_path`,
-   `uploads.path` and `backups.path` blank: the app then uses `~/.chronicle-sessions`, `~/.chronicle-uploads` and
-   `~/chronicle-backups`, all outside the site.
-6. For the upload limits, put a `.user.ini` in the site's folder (or use the panel's PHP settings):
+   Set `db` (the panel's hostname, not `127.0.0.1`), `base_url` (`https://gms-almanac.com`), the `oauth` ids and
+   secrets, and your sign-in email under `admin_identities`. Every setting is explained in the file. Leave
+   `session.save_path`, `uploads.path` and `backups.path` blank: the app then uses `~/.chronicle-sessions`,
+   `~/.chronicle-uploads` and `~/chronicle-backups`, all outside the site.
+3. `cd ~/gms-almanac.com && php tools/migrate.php` creates the tables.
+4. Check it as in step 7. A second account that signs in waits for approval under **Site Admin → Users**; approve it,
+   then add it to a campaign from the campaign's **Members** tab.
 
-   ```ini
-   upload_max_filesize = 10M
-   post_max_size = 12M
-   ```
+The app looks for its config in this order: the `$CHRONICLE_CONFIG` environment variable, `chronicle-config.php` one
+level above the web root, `~/chronicle-config.php`, then `api/config.php`.
 
-Then carry on from step 6 (skip its commands: the panel made the database) through step 14, with `~/gms-almanac.com`
-in place of `/var/www/gms-almanac` and `~/chronicle-config.php` in place of `/var/www/chronicle-config.php`. For
-nightly backups use the panel's cron jobs.
+## If the new site is under a different DreamHost user
+
+Then its home folder is a different one, and the new site doesn't see the old config, uploads or database login. Do
+steps 2, 3 and 5, then, before the switch:
+
+1. Copy the config across and fix its permissions: as the old user, `scp ~/chronicle-config.php
+   newuser@gms-almanac.com:` then, as the new user, `chmod 600 ~/chronicle-config.php`.
+2. Copy the uploads: as the old user, `rsync -av ~/.chronicle-uploads/ newuser@gms-almanac.com:.chronicle-uploads/`,
+   and again just before the switch for anything added since.
+3. In step 6, run the export as the old user (`php tools/export-site.php`, which works for a database of its own as
+   well as a shared one), copy the file across with `scp`, and load it into a database the new site has (a new
+   one, step 4). Then carry on with 6c to 6e as the new user.
 
 ## Behind a CDN or proxy
 
@@ -504,25 +402,31 @@ SSL mode to *Full (strict)* so it talks to the server over HTTPS. The header is 
 only its last hop that isn't one of them, so a visitor can't pick their own address by sending the header
 themselves. Leave the list empty when PHP is reached directly.
 
+
 ## Troubleshooting
 
-- **The browser says the connection isn't private.** The certificate isn't there yet: check `dig` (step 2) and run
-  Certbot again.
-- **Every page is a 500.** Look in `/var/log/apache2/gms-almanac-error.log`. Usually `AllowOverride All` is missing,
-  or a module isn't on (`sudo a2enmod rewrite headers alias && sudo systemctl reload apache2`).
+- **The browser says the connection isn't private.** The certificate isn't there yet. Check `dig +short
+  gms-almanac.com` gives the panel's address, then add (or retry) the Let's Encrypt certificate under *Websites →
+  Secure Certificates*.
+- **DreamHost's placeholder page shows instead of the app.** The folder still has DreamHost's `index.html`, or the
+  website's web directory isn't `~/gms-almanac.com`. Check step 3, and the web directory on the site's *Manage* page.
+- **Every page is a 500.** Look at `~/logs/gms-almanac.com/https/error.log`. Usually the PHP version is too old (set
+  8.1 or newer on the site's *Manage* page), or a `.user.ini` line is mistyped.
 - **"redirect_uri_mismatch" from Google, or GitHub's "The redirect_uri is not associated with this application".**
-  The callback registered in step 7 doesn't match `base_url` + `/api/auth/callback.php` exactly: same `https`, no
+  The callback registered in step 5 doesn't match `base_url` + `/api/auth/callback.php` exactly: same `https`, no
   `www.`, no trailing slash on `base_url`.
-- **Signed in, then straight back to the sign-in page.** The session folder isn't writable by Apache
-  (`sudo chown www-data:www-data /var/lib/gms-almanac/sessions`), or `cookie_secure` is on while the site is reached
-  over plain http.
-- **"This GM's Almanac database needs an upgrade".** Run `php tools/migrate.php`.
-- **Uploads fail.** Check `upload_max_filesize` and `post_max_size` (step 3) and that the uploads folder belongs to
-  `www-data`. install.php's page and the error log say when the folder can't be used.
-- **A moved player shows up as a new account waiting for approval.** They signed in with a different Google or GitHub
+- **Sign-in goes back to the old address.** `base_url` in `~/chronicle-config.php` still says the old one (step 6c).
+- **"This GM's Almanac database needs an upgrade".** Run `php tools/migrate.php` in `~/gms-almanac.com`.
+- **Can't connect to the database.** On DreamHost the host is the panel's MySQL hostname (like
+  `mysql.gms-almanac.com`), never `localhost` or `127.0.0.1`; a new hostname can take a few minutes to answer.
+- **Pictures are missing.** The uploads folder isn't where the new site looks. With the same user and a blank
+  `uploads.path` it is `~/.chronicle-uploads`; check `ls -a ~` and the config's `uploads.path`.
+- **Uploads fail.** Check the `.user.ini` from step 3. install.php's page and the error log say when the uploads
+  folder can't be used.
+- **A player shows up as a new account waiting for approval.** They signed in with a different Google or GitHub
   account than before. Approve them, or have them sign in with the one they used on the old site.
 - **`tools/export-site.php` says the database needs an upgrade.** Run `./deploy.sh` (or `php tools/migrate.php`) on
-  the old server first, so the copy is complete.
+  the old site first, so the copy is complete.
 
 ## Installable app
 
