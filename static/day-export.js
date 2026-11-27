@@ -1,4 +1,4 @@
-/* day-export.js — one day as a Markdown file, laid out like Sinless's Scabard
+/* day-export.js — one day as a Markdown file, laid out like a Scabard
  * export: a # title, an italic byline, bold-label stat lines joined with " · ",
  * ## sections and an italic footer. Paste it into Scabard or any wiki.
  *

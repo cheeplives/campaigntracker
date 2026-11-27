@@ -236,7 +236,7 @@ function upgrade_database(PDO $pdo, string $root): array {
         }
         if ($needAccess) {
             run_sql_file($pdo, "$root/db/migrations/020_chronicle_access.sql");
-            $done[] = 'GM\'s Almanac now approves its own users, apart from Sinless; everyone kept the access they had.';
+            $done[] = 'GM\'s Almanac now keeps its own approval list; everyone kept the access they had.';
         }
         return $done;
     } finally {

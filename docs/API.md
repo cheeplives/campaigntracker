@@ -22,10 +22,10 @@ of the campaign), when its maker leaves the campaign, or when it runs out: a key
 Send the key in the `X-Chronicle-Key` header. Each action is `api/index.php?a=<action>` under the site's address:
 
 ```sh
-curl -H "X-Chronicle-Key: $KEY" "https://example.com/chronicle/api/index.php?a=campaign"
+curl -H "X-Chronicle-Key: $KEY" "https://gms-almanac.com/api/index.php?a=campaign"
 curl -H "X-Chronicle-Key: $KEY" -H "Content-Type: application/json" \
   -d '{"abs_day": 120, "shift": 2, "body": "Reached the ford at dusk"}' \
-  "https://example.com/chronicle/api/index.php?a=shift_note_add"
+  "https://gms-almanac.com/api/index.php?a=shift_note_add"
 ```
 
 - Reads are `GET`. Writes are `POST` with a JSON body. No CSRF token or cookie is needed, and none is used: a request

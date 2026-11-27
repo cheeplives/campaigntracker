@@ -2,10 +2,8 @@
 -- Fresh install: mysql -u <user> -p <database> < db/schema.sql  (or run install.php).
 -- Existing install: run the files in db/migrations/ you have not run yet, in order.
 
--- users: one row per OAuth provider identity, identical to the Sinless app's
--- users table. Point both apps at one database and they share accounts (one sign-in
--- for both); each app keeps its own approvals (Chronicle's are in chronicle_access, and
--- users.status is Sinless's). Keyed on the provider's stable user id, never on email.
+-- users: one row per OAuth provider identity. Approvals are in chronicle_access;
+-- users.status and is_admin are older columns (is_admin marks a config-listed admin). Keyed on the provider's stable user id, never on email.
 -- New sign-ups land as 'pending' until an admin approves them.
 -- provider 'legacy' marks an account from before OAuth sign-in (see
 -- db/migrations/001_oauth_signin.sql); it is claimed by the first sign-in whose
@@ -27,9 +25,9 @@ CREATE TABLE IF NOT EXISTS users (
   KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- chronicle_access: who may use Campaign Chronicle, apart from users.status, which is Sinless's. A sign-in with no row
+-- chronicle_access: who may use GM's Almanac (not users.status, an older column). A sign-in with no row
 -- here asks for access (a 'pending' row); site admins (users.is_admin) are approved on sign-in. Removing someone from
--- Chronicle deletes their row, never the shared users row. See db/migrations/020_chronicle_access.sql.
+-- Chronicle deletes their row, never the users row. See db/migrations/020_chronicle_access.sql.
 CREATE TABLE IF NOT EXISTS chronicle_access (
   user_id       BIGINT UNSIGNED NOT NULL,
   status        ENUM('pending','approved','revoked') NOT NULL DEFAULT 'pending',
@@ -40,7 +38,7 @@ CREATE TABLE IF NOT EXISTS chronicle_access (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Fixed-window counters for lib.php rate_limit(), also identical to Sinless's.
+-- Fixed-window counters for lib.php rate_limit().
 CREATE TABLE IF NOT EXISTS rate_limits (
   bucket        VARCHAR(32)  NOT NULL,
   id            VARCHAR(64)  NOT NULL,
@@ -57,7 +55,7 @@ CREATE TABLE IF NOT EXISTS user_prefs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- user_profiles: the name and pronouns someone sets on their Account page, used in place of users.display_name (their
--- Google or GitHub name, which every sign-in rewrites). Chronicle's own, so Sinless never sees it. Migration 036.
+-- Google or GitHub name, which every sign-in rewrites). Migration 036.
 CREATE TABLE IF NOT EXISTS user_profiles (
   user_id   BIGINT UNSIGNED NOT NULL,
   name      VARCHAR(150) NULL DEFAULT NULL,   -- NULL: use users.display_name

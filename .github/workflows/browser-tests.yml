@@ -1,6 +1,6 @@
 # Cross-browser tests: the same Playwright suite (tests/) in Chromium, Firefox
-# and WebKit (Safari's engine), desktop, phone and iPad. Same matrix as Sinless's
-# workflow, plus PHP and MySQL because this app has a server. See tests/README.md.
+# and WebKit (Safari's engine), desktop, phone and iPad. PHP and MySQL
+# run beside it because this app has a server. See tests/README.md.
 name: Browser tests
 
 # A push to a pull request's branch already runs as the pull request (against main merged in), so pushes run on their

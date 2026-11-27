@@ -1,6 +1,6 @@
 <?php
 /**
- * me.php — the client's auth probe (same contract as Sinless).
+ * me.php — the client's auth probe.
  *   200 {user fields + csrf}   when signed in (any status: the client shows the
  *                              waiting screen for pending/revoked accounts)
  *   401 {error, providers[]}   when signed out (providers = which buttons to show)

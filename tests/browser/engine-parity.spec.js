@@ -1,5 +1,5 @@
 // engine.js gives exactly the same answers in the browser as under Node, in
-// every engine (Sinless runs the same check on rules.js).
+// every engine.
 const { test, expect } = require("@playwright/test");
 const path = require("path");
 const Engine = require(path.join(__dirname, "..", "..", "static", "engine.js"));

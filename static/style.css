@@ -1,11 +1,10 @@
 /* GM's Almanac — the GM Screen look: cardstock panels, serif headings in
  * sentence case (Spectral, body text in Atkinson Hyperlegible) over tapered stat-block rules, folder-divider tabs
  * and chunky calendar tiles, in warm parchment and brass by default.
- * Token names match Sinless's style.css (--bg --panel --panel-2 --line --text
- * --dim --accent --on-accent --ok --bad --disp --body --mono), so shared
- * components read the same in both apps; each app keeps its own palette.
+ * Theme tokens: --bg --panel --panel-2 --line --text --dim --accent
+ * --on-accent --ok --bad --disp --body --mono.
  *
- * Two independent axes on <html>, the same as Sinless:
+ * Two independent axes on <html>:
  *   data-theme  = light | dark                  -> MODE (the 🌙/☀ toggle)
  *   data-scheme = parchment | nightsky | …      -> THEME (the top-bar picker)
  * Both are set before first paint by static/theme-init.js and remembered in

@@ -2,8 +2,8 @@
 
 Automated checks that GM's Almanac behaves the same in **Chromium**
 (Chrome, Edge), **Firefox** and **WebKit** (Safari, and every browser on
-iPhone/iPad), on desktop, phone and iPad-sized screens. Set up the same way as
-Sinless's suite, with PHP and MySQL added because this app has a server.
+iPhone/iPad), on desktop, phone and iPad-sized screens. PHP and MySQL run beside
+them because this app has a server.
 
 They run on GitHub Actions on every pull request and every push to main
 (`.github/workflows/browser-tests.yml`), every project in full, each split
@@ -25,9 +25,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 
 ## What's covered
 
-- **chronicle-access**: GM's Almanac approves its own users apart from Sinless: an account approved for Sinless asks
-  for GM's Almanac on its first sign-in here and waits; approving, revoking or removing someone in GM's Almanac leaves
-  their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
+- **chronicle-access**: approvals live in `chronicle_access`, not the older `users.status`: an account with no access
+  row asks on its first sign-in here and waits; approving, revoking or removing someone leaves the old column and the
+  account row alone; migration 020 carries everyone's access over as it was.
 - **hardening**: an exception that isn't a database one still answers JSON (`server_error`), never PHP's HTML page; an
   outbound reply larger than its cap is refused, with or without a Content-Length; `X-Forwarded-For` is believed only
   from the config's `trusted_proxies`, and only its nearest hop that isn't one of them; the API refuses to run on a
