@@ -3024,3 +3024,7 @@ dialog.kit-dialog.econ-dialog { width: min(640px, calc(100vw - 32px)); max-heigh
 .asst-guide .asst-prompt textarea { min-height: 300px; }
 .asst-guide .secretfield textarea { border-left: 3px solid var(--secret); }   /* GM only */
 @media print { .asst-panel { display: none; } }
+
+/* The privacy policy and terms (privacy/, terms/): plain pages with no app around them. */
+main.legal { max-width: 860px; }
+main.legal h2 { margin-top: 1.4em; } main.legal h3 { margin-top: 1em; }
