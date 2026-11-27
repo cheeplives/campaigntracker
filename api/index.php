@@ -146,6 +146,15 @@ function campaign_owner(int $cid): ?int {
     $id = $st->fetchColumn();
     return $id === false ? null : (int)$id;
 }
+/** The campaigns user $uid is a GM of with no other GM: deleting the account deletes these too. [[id, name], ...] */
+function user_sole_gm_campaigns(int $uid): array {
+    $st = db()->prepare("SELECT c.id, c.name FROM campaign_members m JOIN campaigns c ON c.id=m.campaign_id
+        WHERE m.user_id=? AND m.role='gm'
+          AND NOT EXISTS (SELECT 1 FROM campaign_members o WHERE o.campaign_id=m.campaign_id AND o.role='gm' AND o.user_id<>m.user_id)
+        ORDER BY c.name");
+    $st->execute([$uid]);
+    return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => (string)$r['name']], $st->fetchAll());
+}
 function need_owner(int $cid): void {
     need_gm($cid);
     $owner = campaign_owner($cid);
@@ -1116,6 +1125,40 @@ try {
             db()->commit();
         }
         out(['ok' => true]);
+
+    // Deleting an account for good (the privacy policy promises it on request): the account row and everything keyed to it
+    // go, what they wrote in campaigns stays without their name (the foreign keys set it to NULL), and campaigns no other
+    // GM runs go with them. user_erase_check says which campaigns those are, so Site Admin can name them first.
+    case 'user_erase_check':
+        need_admin();
+        out(['campaigns' => user_sole_gm_campaigns(int_in($_GET['id'] ?? null, 1))]);
+
+    case 'user_erase':
+        $admin = need_admin();
+        $id = int_in(p('id'), 1);
+        if (p('confirm') !== 'DELETE') fail('Confirmation missing');
+        if ($id === $admin['id']) fail("You can't delete yourself");
+        $st = db()->prepare('SELECT * FROM users WHERE id=?');
+        $st->execute([$id]);
+        $u = $st->fetch();
+        if (!$u) fail('User not found', 404);
+        if (is_site_admin($u)) fail('Site admins can\'t be deleted here. Take them out of admin_identities first.');
+        @set_time_limit(300);
+        $gone = user_sole_gm_campaigns($id);
+        foreach ($gone as $c) {   // as campaign_delete does: the files, then the campaign and every row in it
+            attachments_purge((int)$c['id']);
+            db()->prepare('DELETE FROM campaigns WHERE id=?')->execute([$c['id']]);
+        }
+        db()->beginTransaction();
+        db()->prepare('UPDATE tokens SET member_id=NULL WHERE member_id=?')->execute([$id]);
+        // Rows that name them without a foreign key: invitations to their email, and their problem reports (which can
+        // carry a screenshot of their screen). The rest cascades or is set to NULL with the users row.
+        if ((string)$u['email'] !== '' && has_table('campaign_invites'))
+            db()->prepare('DELETE FROM campaign_invites WHERE email=?')->execute([mb_strtolower((string)$u['email'])]);
+        if (has_table('site_reports')) db()->prepare('DELETE FROM site_reports WHERE user_id=?')->execute([$id]);
+        db()->prepare('DELETE FROM users WHERE id=?')->execute([$id]);
+        db()->commit();
+        out(['ok' => true, 'campaigns' => count($gone)]);
 
     // ===== campaigns =====
     case 'templates':
