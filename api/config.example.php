@@ -24,9 +24,7 @@ return [
   'db' => [
     'host'     => '127.0.0.1',
     'port'     => 3306,
-    // To share accounts (one sign-in for both apps) with Sinless, use Sinless's
-    // database here: the users and rate_limits tables are identical. Do this
-    // only on a fresh install (an existing install keeps its own database).
+    // A database of GM's Almanac's own: it shares nothing with any other app.
     'name'     => 'chronicle',
     'user'     => 'chronicle_app',
     'password' => 'CHANGE_ME',
@@ -36,12 +34,13 @@ return [
   // --- Where the app lives --------------------------------------------------
   // Absolute base URL of the site (no trailing slash), used to build the OAuth
   // redirect_uri and to validate post-login redirects as same-origin.
-  'base_url' => 'https://example.com/chronicle',
+  // At the root of its own domain this is e.g. 'https://gms-almanac.com'; in a
+  // folder, 'https://example.com/almanac'.
+  'base_url' => 'https://gms-almanac.com',
 
   // --- OAuth providers ------------------------------------------------------
-  // You can reuse Sinless's OAuth apps: add this app's callback as a second
-  // authorized redirect URI (Google) or register a second OAuth app (GitHub
-  // allows one callback per app). The callback is:
+  // GM's Almanac's own OAuth apps (a Google OAuth client and a GitHub OAuth
+  // app, each named GM's Almanac so the consent screen says so). The callback is:
   //   <base_url>/api/auth/callback.php
   // Leave a provider's client_id empty to hide its sign-in button.
   'oauth' => [
@@ -86,7 +85,7 @@ return [
   // invitation's link (Members tab); with this off, the GM copies the link instead.
   'approval_email' => [
     'enabled'        => false,
-    'from'           => 'GM\'s Almanac <noreply@example.com>',
+    'from'           => 'GM\'s Almanac <noreply@gms-almanac.com>',
     'subject'        => 'Your GM\'s Almanac account is approved',
     'revoke_subject' => 'Your GM\'s Almanac access was removed',
     'invite_subject' => "You're invited to a campaign on GM's Almanac",
@@ -95,8 +94,7 @@ return [
 
   // --- Session / cookie -----------------------------------------------------
   'session' => [
-    // Keep this different from Sinless's cookie name so the two apps' sessions
-    // don't overwrite each other on the shared domain.
+    // The session cookie's name. Keep it unique if another app ever shares the domain.
     'name'            => 'chronicle_sid',
     'idle_timeout'    => 60 * 60 * 24 * 14,   // seconds of inactivity before logout (14d)
     'absolute_timeout'=> 60 * 60 * 24 * 60,   // hard cap on a session's life (60d)

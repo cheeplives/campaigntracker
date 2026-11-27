@@ -2,7 +2,7 @@
  * All user-supplied text is inserted with textContent (via el()), never innerHTML. Rich text notes are rebuilt
  * element by element from an allow-list by RichText.view() (static/richtext.js).
  * Permissions are enforced by api/index.php; the UI only hides controls a role can't use.
- * Sign-in is Google/GitHub with an admin approval queue, the same as Sinless (api/auth/). */
+ * Sign-in is Google/GitHub with an admin approval queue (api/auth/). */
 (function () {
   'use strict';
   const E = window.Engine;
@@ -810,7 +810,7 @@
     ]));
   }
 
-  // ------------------------------------------------------------ theme (same control and storage scheme as Sinless)
+  // ------------------------------------------------------------ theme
   const THEME_KEY = 'chronicle:theme';
   /** Light / dark. In the bar (signed out) it is the sun or moon alone; in the account menu (inMenu) it says which mode a
    * press switches to. Either way its name is "Toggle light / dark mode". */
@@ -849,7 +849,7 @@
       post('prefs_save', { scheme: id }).then(r => { S.user.prefs = r.prefs; }).catch(err => toast(err.message, true));
     }
   }
-  /** Top-bar theme picker: a pill showing the current theme, opening a menu of all of them (like Sinless's). */
+  /** Top-bar theme picker: a pill showing the current theme, opening a menu of all of them. */
   function schemePicker() {
     const cur = schemeOf(currentScheme());
     const list = el('ul', { class: 'scheme-list', role: 'menu', hidden: true });
@@ -898,7 +898,7 @@
     const ret = encodeURIComponent(location.pathname + location.search + location.hash);
     mount(el('div', { class: 'card narrow auth-card' },
       el('h1', {}, 'GM\'s Almanac'),
-      el('p', { class: 'muted' }, 'Sign in to see your campaigns. It\'s the same Google or GitHub sign-in as Sinless.'),
+      el('p', { class: 'muted' }, 'Sign in with Google or GitHub to see your campaigns.'),
       providers.length
         ? el('div', { class: 'auth-buttons' }, providers.map(p => el('a', { class: `button primary btn-oauth ${p}`, href: `api/auth/login.php?provider=${p}&return=${ret}` }, `Sign in with ${PROVIDER_LABEL[p] || p}`)))
         : el('p', { class: 'bad' }, 'No sign-in providers are set up on the server yet.'),
@@ -1119,16 +1119,16 @@
             !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
             !self ? act(legacy ? 'Delete' : 'Remove', async () => {
               if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
-                : `Remove ${u.display_name || u.email} from GM's Almanac? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
+                : `Remove ${u.display_name || u.email} from GM's Almanac? They leave every campaign here, and signing in again puts them back in the queue.`,
                 { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
               await post('user_delete', { id: u.id });
-            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off GM\'s Almanac and out of its campaigns. Their Sinless account stays') : null))));
+            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off GM\'s Almanac and out of its campaigns. Signing in again asks for access anew') : null))));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {}, el('span', { class: 'visually-hidden' }, 'Actions'))), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'Everyone who has signed in to GM\'s Almanac is listed here, after their first sign-in. Approving someone here lets them into GM\'s Almanac only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to GM\'s Almanac is listed here, after their first sign-in. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
   }
   /** Site Admin's Sheets tab: load the starter templates, and the games people asked for with Request a game. */
   async function viewAdminSheets() {
@@ -8324,7 +8324,7 @@
     }
   }
 
-  /** Ask the server who we are (the same probe as Sinless), then show the gate or the app. */
+  /** Ask the server who we are, then show the gate or the app. */
   async function boot() {
     if (PANEL) return panelBoot();
     clearTimeout(pendingTimer);

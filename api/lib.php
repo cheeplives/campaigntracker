@@ -3,8 +3,7 @@
  * lib.php — shared backend: config, PDO, hardened sessions, auth guards,
  * JSON I/O, rate limiting and TLS-verified HTTP helpers.
  *
- * Ported from the Sinless app's api/lib.php so both apps sign in the same way
- * (Google/GitHub OAuth + an admin approval queue). Every endpoint does
+ * Sign-in is Google/GitHub OAuth with an admin approval queue. Every endpoint does
  * `require __DIR__ . '/lib.php';` (or '/../lib.php') first. PHP 8.
  *
  * Security posture:
@@ -148,7 +147,7 @@ function db(): PDO {
  * `session.save_path` in config wins. Otherwise derive one from the parent of
  * the web root, which on shared hosts (DreamHost included) is the account home:
  * outside the web root, and ours. The session name is appended so two apps on
- * one account (Sinless and Chronicle) never share a directory.
+ * one hosting account never share a directory.
  *
  * Falls back to PHP's default whenever the directory can't be used, because a
  * save_path that doesn't exist or isn't writable takes down every login.
@@ -268,7 +267,7 @@ function json_out($data, int $status = 200): void {
   echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   exit;
 }
-/** Error body shared with Sinless: a stable machine `error` code the client can
+/** Error body: a stable machine `error` code the client can
  * branch on, plus a human `message` it can show as-is. */
 function json_error(int $status, string $code, string $message = '', string $detail = ''): void {
   $body = ['error' => $code];
@@ -295,8 +294,8 @@ function has_table(string $t): bool {
   $tables ??= array_flip(db()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
   return isset($tables[$t]);
 }
-/** Whether migration 020 has been run: Chronicle keeps its own approvals in chronicle_access. Until it has, the shared
- * users.status (Sinless's) still decides, as before. */
+/** Whether migration 020 has been run: Chronicle keeps its own approvals in chronicle_access. Until it has, the older
+ * users.status still decides, as before. */
 function has_access_table(): bool {
   static $has = null;
   return $has ??= has_table('chronicle_access');
@@ -503,7 +502,7 @@ function sign_in_identity(string $provider, array $identity): int {
   if ($user) {
     $pdo->prepare('UPDATE users SET email = ?, display_name = ?, avatar_url = ?, last_login_at = NOW() WHERE id = ?')
         ->execute([$identity['email'], $identity['name'], $identity['avatar'], $user['id']]);
-    // Someone with an account from Sinless asks for Chronicle the first time they sign in here.
+    // An account with no access row yet (removed earlier, or from a database once shared with another app) asks again.
     chronicle_access_request((int) $user['id'], $isAdmin || ((int) $user['is_admin'] && !$admins), $provider, $identity);
     return (int) $user['id'];
   }
@@ -536,8 +535,7 @@ function sign_in_identity(string $provider, array $identity): int {
 
 /**
  * Make sure user $userId has a say in Chronicle: an admin is approved; anyone else with no chronicle_access row gets a
- * 'pending' one, and the signup alert goes out, naming GM's Almanac, so it can't be mistaken for a Sinless
- * request. Someone already approved, waiting or revoked here is left as they are. $alert forces the alert (a brand
+ * 'pending' one, and the signup alert goes out. Someone already approved, waiting or revoked here is left as they are. $alert forces the alert (a brand
  * new account before migration 020, when there is no table to tell by).
  */
 function chronicle_access_request(int $userId, bool $isAdmin, string $provider, array $identity, bool $alert = false): void {
@@ -554,7 +552,7 @@ function chronicle_access_request(int $userId, bool $isAdmin, string $provider, 
   }
   if ($alert && !$isAdmin) {
     post_signup_webhook(sprintf(
-      "🆕 GM's Almanac access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Site Admin in GM's Almanac (not Sinless).",
+      "🆕 GM's Almanac access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Site Admin in GM's Almanac.",
       $identity['name'] !== '' ? $identity['name'] : '(none)', $identity['email'], $provider));
   }
 }

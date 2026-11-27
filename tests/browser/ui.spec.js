@@ -1,5 +1,5 @@
 // The shared UI kit: in-page dialogs instead of confirm()/prompt(), and the
-// light/dark toggle and colour themes, which are remembered like Sinless's.
+// light/dark toggle and colour themes, which are remembered.
 const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);

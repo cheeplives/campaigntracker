@@ -1,5 +1,5 @@
-// GM's Almanac approves its own users, apart from Sinless, though both share the users table (one Google or GitHub
-// sign-in for both): users.status is Sinless's, chronicle_access is Chronicle's. See db/migrations/020_chronicle_access.sql.
+// GM's Almanac's approvals live in chronicle_access, not in users.status (an older column, and the other app's when the
+// database was once shared with another app). An account with no access row asks again. See db/migrations/020_chronicle_access.sql.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
 const { person, ADMIN, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
@@ -7,17 +7,17 @@ test.afterEach(closeContexts);
 
 test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== "chromium", "the server answers the same whatever the browser"));
 
-/** An account that so far has only used Sinless, approved there. */
-function sinlessOnly(who) {
+/** An account with no access here yet (one a shared database brought, say), its old users.status approved. */
+function withoutAccess(who) {
   sql(`INSERT INTO users (provider, provider_user_id, email, display_name, status, approved_at) VALUES ('google', '${who.id}', '${who.email}', '${who.name}', 'approved', NOW())`);
   return Number(sql(`SELECT id FROM users WHERE provider_user_id = '${who.id}'`).trim());
 }
 const access = id => sql(`SELECT status FROM chronicle_access WHERE user_id = ${id}`).trim();
-const sinless = id => sql(`SELECT status FROM users WHERE id = ${id}`).trim();
+const oldStatus = id => sql(`SELECT status FROM users WHERE id = ${id}`).trim();
 
-test("someone approved for Sinless asks for Chronicle on their first sign-in here, and waits", async ({ page, browser }) => {
+test("an account with no access row asks for access on its first sign-in here, and waits", async ({ page, browser }) => {
   const who = person("Ines");
-  const id = sinlessOnly(who);
+  const id = withoutAccess(who);
   const gm = person("Hale");
   const gp = await (await newContext(browser)).newPage();
   await signIn(gp, gm);
@@ -34,7 +34,7 @@ test("someone approved for Sinless asks for Chronicle on their first sign-in her
   expect((await (await page.request.get("api/auth/me.php")).json()).status).toBe("pending");
   expect((await api(page, "campaigns")).json.error).toBe("not_approved");
   expect(access(id)).toBe("pending");
-  expect(sinless(id)).toBe("approved");                  // still approved for Sinless
+  expect(oldStatus(id)).toBe("approved");                  // the old column is left alone
   expect((await api(ap, "users")).json.users.find(u => u.email === who.email).status).toBe("pending");
 
   await approve(browser, who.email);
@@ -42,18 +42,18 @@ test("someone approved for Sinless asks for Chronicle on their first sign-in her
   expect((await api(page, "campaigns")).json.campaigns.map(c => c.id)).toContain(cid);
 });
 
-test("approving or revoking in Chronicle leaves the account's Sinless access alone", async ({ page, browser }) => {
+test("approving or revoking here leaves the old users.status column alone", async ({ page, browser }) => {
   const who = person("Juno");
   await signIn(page, who);
   const id = Number((await (await page.request.get("api/auth/me.php")).json()).id);
-  expect(sinless(id)).toBe("pending");
+  expect(oldStatus(id)).toBe("pending");
   await approve(browser, who.email);
   expect(access(id)).toBe("approved");
-  expect(sinless(id)).toBe("pending");
+  expect(oldStatus(id)).toBe("pending");
   await approve(browser, who.email, "revoked");
   expect(access(id)).toBe("revoked");
   expect((await api(page, "campaigns")).json.error).toBe("not_approved");
-  // and a Sinless change doesn't reach Chronicle either
+  // and a change to the old column doesn't reach GM's Almanac either
   sql(`UPDATE users SET status = 'approved' WHERE id = ${id}`);
   expect((await api(page, "campaigns")).json.error).toBe("not_approved");
 });
@@ -96,8 +96,8 @@ test("migration 020 carries everyone's access over as it was", () => {
   }
 });
 
-test("an admin is one the config names: the flag alone, as from Sinless or an old listing, gives nothing here", async ({ page, browser }) => {
-  // an account whose users.is_admin is set (it is an admin in Sinless, or was listed here once) but which
+test("an admin is one the config names: the flag alone, as from another app or an old listing, gives nothing here", async ({ page, browser }) => {
+  // an account whose users.is_admin is set (an admin in another app that shared the database, or listed here once) but which
   // admin_identities doesn't name
   const who = person("Flagged");
   await signIn(page, who);

@@ -3,7 +3,7 @@
  * GM's Almanac — JSON API for campaign data.
  * Every request: api/index.php?a=<action>[&cid=<campaign id>...]
  * POST bodies are JSON and must carry the X-CSRF-Token header.
- * Sign-in lives in api/auth/ (Google/GitHub, shared with Sinless); every action
+ * Sign-in lives in api/auth/ (Google/GitHub); every action
  * here needs an approved account.
  * All permission checks (GM vs player, secret filtering) happen here, never only in the browser.
  */
@@ -1036,7 +1036,7 @@ try {
 
     case 'profile_save':
         // The name and pronouns Chronicle calls them by, in place of their Google or GitHub name. Blank clears either one.
-        // Kept in user_profiles, as the users row is Sinless's too and every sign-in rewrites its name.
+        // Kept in user_profiles, as every sign-in rewrites the name in the users row.
         $u = me();
         $clean = fn($v) => is_string($v) ? trim((string)preg_replace('/\s+/u', ' ', $v)) : fail('Expected text');
         $name = $clean(p('name', ''));
@@ -1048,8 +1048,8 @@ try {
         out(['name' => $name === '' ? $u['provider_name'] : $name, 'custom_name' => $name === '' ? null : $name, 'pronouns' => $pronouns === '' ? null : $pronouns]);
 
     // ===== user admin =====
-    // Chronicle's own queue (chronicle_access), apart from Sinless's: everyone who has signed in here, and accounts from
-    // before Google/GitHub sign-in. Someone who only uses Sinless isn't listed. New sign-ins wait as 'pending'.
+    // The approval queue (chronicle_access): everyone who has signed in here, and accounts from before Google/GitHub
+    // sign-in. An account with no access row (one removed here) isn't listed. New sign-ins wait as 'pending'.
     // Admin rights come only from admin_identities in the config (or a migrated account).
     case 'users':
         need_admin();
@@ -1080,7 +1080,7 @@ try {
         if (!$t) fail('User not found', 404);
         if ($status === 'revoked' && is_site_admin($t)) fail("Admins can't be revoked here. Remove them from admin_identities first.");
         if (chronicle_status($t) === $status) out(['ok' => true]);
-        // Only their access to Chronicle: users.status is Sinless's.
+        // Access lives in chronicle_access; users.status is an older column, kept only for installs before migration 020.
         if (has_access_table()) db()->prepare('INSERT INTO chronicle_access (user_id, status, approved_at) VALUES (?, ?, IF(?=\'approved\', NOW(), NULL))
             ON DUPLICATE KEY UPDATE status=VALUES(status), approved_at=IF(VALUES(status)=\'approved\', NOW(), approved_at)')->execute([$id, $status, $status]);
         else db()->prepare('UPDATE users SET status=?, approved_at=IF(?=\'approved\', NOW(), approved_at) WHERE id=?')->execute([$status, $status, $id]);
@@ -1106,8 +1106,8 @@ try {
         db()->prepare('UPDATE tokens SET member_id=NULL WHERE member_id=?')->execute([$id]);
         $st = db()->prepare('SELECT provider FROM users WHERE id=?');
         $st->execute([$id]);
-        // The account is shared with Sinless, so it stays: they leave Chronicle (its list and their campaigns) only. An
-        // account from before Google/GitHub sign-in was only ever Chronicle's, and goes.
+        // The account row stays, so what they wrote keeps its author: they leave the list and their campaigns, and a later
+        // sign-in asks for access anew. An account from before Google/GitHub sign-in goes.
         if ($st->fetchColumn() === 'legacy' || !has_access_table()) db()->prepare('DELETE FROM users WHERE id=?')->execute([$id]);
         else {
             db()->beginTransaction();
@@ -1389,7 +1389,7 @@ try {
         if (mb_strlen($q) < 2) out(['users' => [], 'more' => false]);
         $like = '%' . addcslashes($q, '\\%_') . '%';
         // Only a site admin sees emails and finds people by them: any approved user can start a campaign and be its GM, so
-        // the rest search names. The accounts table is shared with Sinless, so a GM who isn't a site admin finds only
+        // the rest search names. So that a GM can't browse everyone who has signed up, a GM who isn't a site admin finds only
         // people they already play with in another campaign; anyone else they add by typing their sign-in email.
         $admin = (bool)me()['is_admin'];
         $mine = $admin ? '' : ' AND u.id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=?)';

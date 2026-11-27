@@ -1,4 +1,4 @@
-// Sign-in works like Sinless's: Google/GitHub buttons, new accounts wait for an
+// Sign-in: Google/GitHub buttons, new accounts wait for an
 // admin, approval lets them in, revoking locks them out, and accounts from the
 // username/password days are taken over by matching email.
 const { test, expect } = require("@playwright/test");

@@ -1,11 +1,10 @@
-/* kit.js — small shared UI kit, written to be identical in GM's Almanac
- * and Sinless: the DOM builder, toasts, tooltips that also work on touch
+/* kit.js — GM's Almanac's small UI kit: the DOM builder, toasts, tooltips that also work on touch
  * screens, and in-page confirm/prompt/alert dialogs that replace the browser's
  * blocking confirm(), prompt() and alert().
  *
- * Plain script, no build step. Everything hangs off the KIT global (like
- * Sinless's RULES / STORAGE / SYNC) so it never clashes with an app's own names.
- * Styles live in each app's style.css under "kit" (#toast, .tip, #tipbox,
+ * Plain script, no build step. Everything hangs off the KIT global so it
+ * never clashes with the app's own names.
+ * Styles live in style.css under "kit" (#toast, .tip, #tipbox,
  * dialog.kit-dialog), using the shared token names.
  * All text goes in through textContent, never innerHTML. */
 'use strict';
@@ -38,7 +37,7 @@ const KIT = (() => {
   }
 
   // ------------------------------------------------------------ icons
-  /* When the page has loaded static/icons.js (GM's Almanac does; Sinless doesn't, and gets plain text), el()
+  /* When the page has loaded static/icons.js (GM's Almanac does; a page without it gets plain text), el()
    * draws each emoji in a label as its icon: '🔒 GM only' becomes the padlock icon then " GM only". The same picture
    * on every device, in the text's colour. Tooltips (data-tip) are drawn the same way. Where a picture can't go (an
    * <option>, a title, a placeholder, an aria-label) the emoji is left out instead. icon('lock') makes one directly. */

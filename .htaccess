@@ -23,7 +23,7 @@
   Header always set Cross-Origin-Opener-Policy "same-origin"
   # Don't advertise the PHP version.
   Header always unset X-Powered-By
-  # CSP: everything from same origin, the same policy as Sinless. No
+  # CSP: everything from same origin. No
   # 'unsafe-inline' for scripts (there are no inline <script> blocks). Inline
   # STYLE attributes produced by el() need 'unsafe-inline'. (Splitting it into style-src-elem 'self' and
   # style-src-attr 'unsafe-inline' made WebKit refuse stylesheets on ordinary pages, so it stays whole.) Fonts

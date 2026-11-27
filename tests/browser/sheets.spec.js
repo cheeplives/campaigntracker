@@ -27,7 +27,7 @@ test("Sheets: a fresh database has the tables, and the upgrade finds nothing lef
 
 test("Sheets: the schema installs beside another app's characters table and leaves it alone", ({}, info) => {
   test.skip(info.project.name !== "chromium", "the database answers the same whatever the browser");
-  // Chronicle can share its database with Sinless, which has a characters table of its own (with a BIGINT id).
+  // A database once shared with another app can hold a characters table of its own (with a BIGINT id).
   const db = `chronicle_shared_${process.pid}`;
   const mysql = (input, database = "") => {
     const args = ["-h", process.env.DB_HOST || "127.0.0.1", "-P", process.env.DB_PORT || "3306", "-u", process.env.DB_USER || "root", "-N"];

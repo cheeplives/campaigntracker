@@ -1,6 +1,6 @@
 // Cross-browser test run for GM's Almanac. See tests/README.md.
 //
-// Same five engines/form factors as Sinless's suite, plus an iPad (Safari's
+// Five engines/form factors, plus an iPad (Safari's
 // engine, touch, no hover) because the app is meant to work fully on one. The app needs PHP and
 // MySQL, so the config starts `php -S` on the repo root with
 // CHRONICLE_CONFIG pointing at support/config.test.php, and support/reset-db.js

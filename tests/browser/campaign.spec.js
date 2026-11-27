@@ -356,7 +356,7 @@ test("a GM finds a player they already play with by searching; nobody is listed 
     return { status: res.status(), json: await res.json() };
   };
 
-  // Accounts are shared with Sinless, so a stranger's name isn't offered to a GM who isn't a site admin...
+  // A GM can't browse every account, so a stranger's name isn't offered to a GM who isn't a site admin...
   expect((await find(page, player.id)).json.users.map(u => u.display_name)).not.toContain(player.name);
   // ...only someone they already play with, here in another of their campaigns
   const other = await makeCampaign(page, `Picker other ${gm.id}`);

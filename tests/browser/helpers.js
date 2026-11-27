@@ -1,4 +1,4 @@
-// Shared setup for the cross-browser specs (same shape as Sinless's helpers.js).
+// Shared setup for the cross-browser specs.
 const { execFileSync } = require("child_process");
 const { expect } = require("@playwright/test");
 
