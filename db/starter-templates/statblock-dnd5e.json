@@ -1,0 +1,251 @@
+{
+  "name": "D&D 5e stat block",
+  "game": "Dungeons & Dragons",
+  "edition": "5e stat block",
+  "kind": "statblock",
+  "dice_game": "dnd5e",
+  "source": {
+    "title": "System Reference Document 5.2 (stat block format)",
+    "owner": "Wizards of the Coast",
+    "url": "https://www.dndbeyond.com/srd",
+    "licence": "CC BY 4.0 (SRD 5.2)"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "type_line",
+            "label": "Size, type and alignment",
+            "type": "text",
+            "summary": true
+          },
+          {
+            "key": "ac",
+            "label": "AC",
+            "type": "number"
+          },
+          {
+            "key": "ac_note",
+            "label": "Armour",
+            "type": "text"
+          },
+          {
+            "key": "hp",
+            "label": "HP",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "hit_dice",
+            "label": "Hit dice",
+            "type": "text"
+          },
+          {
+            "key": "speed",
+            "label": "Speed",
+            "type": "text"
+          },
+          {
+            "key": "initiative",
+            "label": "Initiative",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_abilities",
+        "title": "Abilities",
+        "abilities": true,
+        "modifier": "dnd",
+        "fields": [
+          {
+            "key": "str",
+            "label": "Str",
+            "type": "number"
+          },
+          {
+            "key": "dex",
+            "label": "Dex",
+            "type": "number"
+          },
+          {
+            "key": "con",
+            "label": "Con",
+            "type": "number"
+          },
+          {
+            "key": "int",
+            "label": "Int",
+            "type": "number"
+          },
+          {
+            "key": "wis",
+            "label": "Wis",
+            "type": "number"
+          },
+          {
+            "key": "cha",
+            "label": "Cha",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_details",
+        "title": "Details",
+        "compact": true,
+        "fields": [
+          {
+            "key": "saving_throws",
+            "label": "Saving throws",
+            "type": "text"
+          },
+          {
+            "key": "skills",
+            "label": "Skills",
+            "type": "text"
+          },
+          {
+            "key": "resistances",
+            "label": "Resistances",
+            "type": "text"
+          },
+          {
+            "key": "immunities",
+            "label": "Immunities",
+            "type": "text"
+          },
+          {
+            "key": "vulnerabilities",
+            "label": "Vulnerabilities",
+            "type": "text"
+          },
+          {
+            "key": "senses",
+            "label": "Senses",
+            "type": "text"
+          },
+          {
+            "key": "languages",
+            "label": "Languages",
+            "type": "text"
+          },
+          {
+            "key": "cr",
+            "label": "CR",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_traits",
+        "title": "Traits",
+        "fields": [
+          {
+            "key": "traits",
+            "label": "Traits",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_actions",
+        "title": "Actions",
+        "fields": [
+          {
+            "key": "actions",
+            "label": "Actions",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_bonus_actions",
+        "title": "Bonus actions",
+        "fields": [
+          {
+            "key": "bonus_actions",
+            "label": "Bonus actions",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_reactions",
+        "title": "Reactions",
+        "fields": [
+          {
+            "key": "reactions",
+            "label": "Reactions",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_legendary_actions",
+        "title": "Legendary actions",
+        "fields": [
+          {
+            "key": "legendary_actions",
+            "label": "Legendary actions",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

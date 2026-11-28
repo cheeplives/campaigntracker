@@ -1,0 +1,97 @@
+{
+  "name": "Dungeon World monster",
+  "game": "Dungeon World",
+  "edition": "Monster (also for PbtA)",
+  "kind": "statblock",
+  "dice_game": "pbta",
+  "source": {
+    "title": "Dungeon World (monster format)",
+    "owner": "Sage LaTorra and Adam Koebel",
+    "url": "https://dungeon-world.com/",
+    "licence": "CC BY 3.0"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "tags",
+            "label": "Tags",
+            "type": "text",
+            "summary": true
+          },
+          {
+            "key": "hp",
+            "label": "HP",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "armour",
+            "label": "Armour",
+            "type": "number"
+          },
+          {
+            "key": "damage",
+            "label": "Damage",
+            "type": "text"
+          },
+          {
+            "key": "range_tags",
+            "label": "Range tags",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_details",
+        "title": "Details",
+        "fields": [
+          {
+            "key": "special_qualities",
+            "label": "Special qualities",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "instinct",
+            "label": "Instinct",
+            "type": "text",
+            "size": "full"
+          }
+        ]
+      },
+      {
+        "key": "s_moves",
+        "title": "Moves",
+        "fields": [
+          {
+            "key": "moves",
+            "label": "Moves",
+            "type": "list",
+            "columns": [
+              {
+                "key": "move",
+                "label": "Move"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}

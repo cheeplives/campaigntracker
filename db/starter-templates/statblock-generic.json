@@ -1,0 +1,101 @@
+{
+  "name": "Generic stat block",
+  "game": "Any game",
+  "edition": "",
+  "kind": "statblock",
+  "source": {
+    "title": "A plain stat block for any game",
+    "owner": "GM's Almanac",
+    "url": "https://gms-almanac.com/",
+    "licence": "Our own"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "threat",
+            "label": "Threat",
+            "type": "choice",
+            "options": [
+              "Minion",
+              "Tough",
+              "Dangerous",
+              "Deadly"
+            ]
+          },
+          {
+            "key": "health",
+            "label": "Health",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "defence",
+            "label": "Defence",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_details",
+        "title": "Details",
+        "fields": [
+          {
+            "key": "good_at",
+            "label": "Good at",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "bad_at",
+            "label": "Bad at",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "wants",
+            "label": "Wants",
+            "type": "text",
+            "size": "full"
+          }
+        ]
+      },
+      {
+        "key": "s_attacks",
+        "title": "Attacks",
+        "fields": [
+          {
+            "key": "attacks",
+            "label": "Attacks",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "notes",
+                "label": "Notes"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "name": "Year Zero Engine stat block",
+  "game": "Year Zero Engine",
+  "edition": "NPC stat block",
+  "kind": "statblock",
+  "dice_game": "yze",
+  "source": {
+    "title": "Year Zero Engine Standard Reference Document",
+    "owner": "Free League Publishing",
+    "url": "https://freeleaguepublishing.com/community-content/free-tabletop-licenses/",
+    "licence": "Year Zero Engine Free Tabletop License"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_attributes",
+        "title": "Attributes",
+        "abilities": true,
+        "fields": [
+          {
+            "key": "strength",
+            "label": "Strength",
+            "type": "number"
+          },
+          {
+            "key": "agility",
+            "label": "Agility",
+            "type": "number"
+          },
+          {
+            "key": "wits",
+            "label": "Wits",
+            "type": "number"
+          },
+          {
+            "key": "empathy",
+            "label": "Empathy",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "health",
+            "label": "Health",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "armour",
+            "label": "Armour",
+            "type": "number"
+          },
+          {
+            "key": "skills",
+            "label": "Skills",
+            "type": "text"
+          },
+          {
+            "key": "talents",
+            "label": "Talents",
+            "type": "text"
+          },
+          {
+            "key": "gear",
+            "label": "Gear",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_attacks",
+        "title": "Attacks",
+        "fields": [
+          {
+            "key": "attacks",
+            "label": "Attacks",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "dice",
+                "label": "Dice"
+              },
+              {
+                "key": "damage",
+                "label": "Damage"
+              },
+              {
+                "key": "range",
+                "label": "Range"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}

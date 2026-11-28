@@ -30,7 +30,7 @@ const Sheets = (() => {
     openDoc = null;
   }
   // leaving the editor lets go of the PDF: it was never saved, so it is gone
-  window.addEventListener('hashchange', () => { if (!/^#\/templates\/(new|\d+\/edit)$/.test(location.hash)) closePdf(); });
+  window.addEventListener('hashchange', () => { if (!/^#\/templates\/(new|new-block|\d+\/edit)$/.test(location.hash)) closePdf(); });
 
   // ------------------------------------------------------------ rolling from a sheet
   // Numbers that are never rolled (an age, a level, coins, armour, hit points): no 🎲 beside them.
@@ -94,7 +94,7 @@ const Sheets = (() => {
         opts.holdings().then(n => box.replaceChildren(n), err => box.replaceChildren(el('p', { class: 'bad small' }, err.message)));
       }
     };
-    const sections = (layout?.sections || []).map(s => el('section', { class: 'sheet-sec' + (hidden.has(s.key) ? ' is-hidden' : '') + (s.compact ? ' compact' : '')
+    const sections = (layout?.sections || []).map(s => el('section', { class: 'sheet-sec' + (hidden.has(s.key) ? ' is-hidden' : '') + (s.compact && !opts.statblock ? ' compact' : '')
         + (s.holdings ? ' sheet-holdings-sec' : '') + (s.width && s.width !== 'full' ? ` w-${s.width}` : ''), 'data-key': s.key },
       el('div', { class: 'sheet-sec-head' }, el('h3', {}, s.title || ''), eye(s.key, `the ${s.title} section`)),
       s.holdings ? holdingsBox(s) : el('div', { class: 'sheet-fields' }, (s.fields || []).map(f => {
@@ -301,6 +301,10 @@ const Sheets = (() => {
 
   // ------------------------------------------------------------ library
   const metaLine = t => [t.game, t.edition].filter(Boolean).join(' · ');
+  const isBlock = t => t.kind === 'statblock';
+  /** The character sheet templates of the library, for the pickers that make a character: stat blocks have their own
+   * (addStatBlock). */
+  const sheetTemplates = async () => (await ctx.api('templates')).templates.filter(t => !isBlock(t));
   /** Use: make a character from template t in one of the user's campaigns. */
   async function useTemplate(t) {
     const { campaigns } = await ctx.api('campaigns');
@@ -308,7 +312,7 @@ const Sheets = (() => {
     if (!mine.length) return toast('Join or start a campaign first, then make a character there', true);
     const camp = el('select', { 'aria-label': 'Campaign' }, mine.map(c => el('option', { value: c.id }, c.name)));
     const name = el('input', { maxlength: 150, 'aria-label': 'Character name', required: true, placeholder: 'Their name' });
-    const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'pc' }, 'PC (a player character)'), el('option', { value: 'npc' }, 'NPC (GM only until shown)'));
+    const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'pc' }, 'PC (a player character)'), el('option', { value: 'npc', selected: isBlock(t) }, 'NPC (GM only until shown)'));
     const kindField = ctx.field('Kind', kind);
     const fit = () => { kindField.hidden = mine.find(c => String(c.id) === camp.value)?.role !== 'gm'; if (kindField.hidden) kind.value = 'pc'; };
     camp.addEventListener('change', fit);
@@ -320,7 +324,7 @@ const Sheets = (() => {
       d.remove();
       if (d.returnValue !== 'ok') return;
       try {
-        const r = await ctx.post('character_create', { template_id: t.id, name: name.value, kind: kind.value }, Number(camp.value));
+        const r = await ctx.post('character_create', { template_id: t.id, name: name.value, kind: kind.value, ...(isBlock(t) && kind.value === 'npc' ? { owner_id: 0 } : {}) }, Number(camp.value));
         location.hash = `#/c/${camp.value}/characters/${r.character.id}`;
       } catch (err) { toast(err.message, true); }
     });
@@ -411,14 +415,24 @@ const Sheets = (() => {
       const { templates, requests_on } = await ctx.api('templates', { query: search.value.trim() ? { q: search.value.trim() } : {} });
       if (n !== seq) return;
       request.style.display = requests_on ? '' : 'none';
-      list.replaceChildren(...(templates.length ? editionGroups(templates).map(card) : [el('p', { class: 'muted' }, search.value ? 'No template matches that.' : 'No templates yet.')]));
+      const blocks = templates.filter(isBlock).length;
+      const shown = templates.filter(t => isBlock(t) === (kind === 'statblock'));
+      // Sheets or Stat blocks: shown once the library has a stat block
+      kinds.style.display = !blocks && kind === 'sheet' ? 'none' : '';
+      fill(kinds, [['sheet', 'Character sheets', 'Templates for a character\'s whole sheet'], ['statblock', 'NPC stat blocks', 'Short blocks for an NPC\'s numbers, shown on its Encyclopedia page']].map(([k, l, tip]) =>
+        button(l, () => { kind = k; load().catch(err => toast(err.message, true)); }, kind === k ? 'small on' : 'small', { 'aria-pressed': String(kind === k), 'data-tip': tip })));
+      list.replaceChildren(...(shown.length ? editionGroups(shown).map(card) : [el('p', { class: 'muted' }, search.value ? 'No template matches that.' : kind === 'statblock' ? 'No stat block templates yet.' : 'No templates yet.')]));
     };
+    let kind = 'sheet';
+    const kinds = el('div', { class: 'seg template-kinds', role: 'group', 'aria-label': 'Kind of template', style: { display: 'none' } });
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load().catch(err => toast(err.message, true)), 250); });
     ctx.mount(el('div', { class: 'card' },
       el('div', { class: 'row spread' }, el('h1', {}, 'Sheet templates'),
-        el('div', { class: 'row', style: { marginTop: '0' } }, request, button('+ New template', () => (location.hash = '#/templates/new'), 'primary new-btn'))),
-      el('p', { class: 'muted' }, 'Every character sheet starts from a template. Anyone can use or fork any template here; only its author changes it.'),
-      search), list);
+        el('div', { class: 'row', style: { marginTop: '0' } }, request,
+          button('+ New stat block', () => (location.hash = '#/templates/new-block'), 'new-btn', { 'data-tip': 'Make a stat block template: an NPC\'s numbers in the way a game writes them up' }),
+          button('+ New template', () => (location.hash = '#/templates/new'), 'primary new-btn'))),
+      el('p', { class: 'muted' }, 'Every character sheet starts from a template, and so does an NPC\'s stat block. Anyone can use or fork any template here; only its author changes it.'),
+      search, kinds), list);
     await load();
   }
   async function renderTemplate(id) {
@@ -433,21 +447,22 @@ const Sheets = (() => {
         el('a', { href: '#/templates', class: 'small' }, '← All templates'),
         el('h1', {}, t.name),
         el('div', {}, metaLine(t)),
+        isBlock(t) ? el('div', { class: 'small muted' }, `NPC stat block${t.dice_game && typeof DiceSystems !== 'undefined' ? ` · picked for campaigns whose dice are set to ${DiceSystems.PRESETS.find(g => g.id === t.dice_game)?.name || t.dice_game}` : ''}`) : null,
         el('div', { class: 'small muted row' }, el('span', {}, `by ${t.author}`), el('span', {}, `Used by ${t.uses}`), el('span', {}, plural(t.forks, 'fork')),
           t.is_listed ? null : el('span', {}, 'Unlisted')),
         forkLine(t),
         el('div', { class: 'row' }, actions(t), del)),
-      el('div', { class: 'card sheet-preview' }, el('h2', {}, 'Preview'), renderSheetForm(t.layout, {}, { mode: 'preview' })),
+      el('div', { class: 'card sheet-preview' }, el('h2', {}, 'Preview'), renderSheetForm(t.layout, {}, { mode: 'preview', statblock: isBlock(t) })),
       el('div', { class: 'card template-forks' }, el('h2', {}, 'Forks'),
         forks.length ? el('ul', {}, forks.map(f => el('li', {}, el('a', { href: `#/templates/${f.id}` }, f.name), el('span', { class: 'small muted' }, ` by ${f.author}`))))
           : el('p', { class: 'muted' }, 'No forks yet.')));
   }
 
   // ------------------------------------------------------------ editor
-  /** The editor for template id, or a new one. */
-  async function renderEditor(id) {
+  /** The editor for template id, or a new one: a sheet, or (kind 'statblock') an NPC stat block. */
+  async function renderEditor(id, kind = 'sheet') {
     closePdf();
-    let t = { name: '', game: '', edition: '', is_listed: true, layout: { sections: [] } };
+    let t = { name: '', game: '', edition: '', kind, dice_game: null, is_listed: true, layout: { sections: [] } };
     if (id) {
       t = (await ctx.api('template', { query: { id } })).template;
       if (!t.can_edit) { location.hash = `#/templates/${id}`; return; }
@@ -471,13 +486,18 @@ const Sheets = (() => {
       freshKey(s, s.title);
     };
     /** Every new template gets the Holdings page: the character's own funds, gear and holdings. */
-    const addHoldings = () => { if (!L.hasHoldings(layout)) layout.sections.push(L.holdingsSection(allKeys())); };
+    const block = isBlock(t);   // a stat block: no Holdings page, sections that can be an abilities row, a dice game it is for
+    const vopts = { statblock: block };
+    const addHoldings = () => { if (!block && !L.hasHoldings(layout)) layout.sections.push(L.holdingsSection(allKeys())); };
     if (!layout.sections.length) { addSection(); addHoldings(); }
 
     const name = el('input', { value: t.name, maxlength: 150, 'aria-label': 'Template name', required: true });
     const game = el('input', { value: t.game, maxlength: 100, 'aria-label': 'Game', required: true, placeholder: 'e.g. Mothership' });
     const edition = el('input', { value: t.edition || '', maxlength: 60, 'aria-label': 'Edition', placeholder: 'optional' });
     const listed = el('input', { type: 'checkbox', checked: t.is_listed });
+    // the game a stat block is for, from the dice roller's games: a campaign on it gets this block picked for a new NPC
+    const diceGame = el('select', { 'aria-label': 'Dice game' }, el('option', { value: '' }, 'Any game'),
+      (typeof DiceSystems !== 'undefined' ? DiceSystems.PRESETS : []).map(g => el('option', { value: g.id, selected: g.id === t.dice_game }, g.name)));
     const list = el('div', { class: 'sheet-ed-list' });
     const errors = el('ul', { class: 'sheet-ed-errors', 'aria-live': 'polite' });
     const preview = el('div', { class: 'sheet-preview' });
@@ -486,8 +506,8 @@ const Sheets = (() => {
     const refresh = () => {
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
-        preview.replaceChildren(el('h2', {}, 'Preview'), renderSheetForm(layout, {}, { mode: 'preview', page: previewPage, onPage: p => { previewPage = p; } }));
-        errors.replaceChildren(...L.validate(layout).slice(0, 8).map(e => el('li', {}, e)));
+        preview.replaceChildren(el('h2', {}, 'Preview'), renderSheetForm(layout, {}, { mode: 'preview', statblock: block, page: previewPage, onPage: p => { previewPage = p; } }));
+        errors.replaceChildren(...L.validate(layout, vopts).slice(0, 8).map(e => el('li', {}, e)));
       }, 60);
     };
 
@@ -639,7 +659,7 @@ const Sheets = (() => {
     const holdingsBtn = button('Add Holdings page', () => { addHoldings(); draw(); }, 'small', { 'data-tip': 'A page of the character\'s own funds, gear and holdings, like Party → Holdings' });
     function draw() {
       pageList();
-      holdingsBtn.hidden = L.hasHoldings(layout);
+      holdingsBtn.hidden = block || L.hasHoldings(layout);
       holdingsBtn.style.display = holdingsBtn.hidden ? 'none' : '';   // a button's own display would show it hidden or not
       list.replaceChildren(...layout.sections.map((s, si) => {
         const title = el('input', { value: s.title, maxlength: L.LIMITS.label, 'aria-label': 'Section title' });
@@ -657,9 +677,19 @@ const Sheets = (() => {
         width.addEventListener('change', () => { if (width.value === 'full') delete s.width; else s.width = width.value; refresh(); });
         const compact = el('input', { type: 'checkbox', checked: !!s.compact });
         compact.addEventListener('change', () => { if (compact.checked) s.compact = true; else delete s.compact; refresh(); });
+        // a stat block's row of scores: each field in a column, its label over its number
+        const abil = block ? el('select', { 'aria-label': 'Abilities row', 'data-tip': 'Draw this section as a row of scores on the stat block, the label over each number. With modifiers, a score shows the modifier it gives, as 16 (+3) in D&D' },
+          [['', 'Not a row of scores'], ['row', 'A row of scores'], ['dnd', 'A row of scores with D&D modifiers']].map(([v, l]) => el('option', { value: v, selected: v === (s.modifier === 'dnd' ? 'dnd' : s.abilities ? 'row' : '') }, l))) : null;
+        abil?.addEventListener('change', () => {
+          delete s.abilities; delete s.modifier;
+          if (abil.value) s.abilities = true;
+          if (abil.value === 'dnd') s.modifier = 'dnd';
+          refresh();
+        });
         sec.append(
           el('div', { class: 'row sheet-ed-sec-head' }, title, page, s.holdings ? null : width,
-            s.holdings ? null : el('label', { class: 'small check', 'data-tip': 'Each field on a line, its label beside its box, like a skill list' }, compact, ' Compact rows'),
+            s.holdings ? null : el('label', { class: 'small check', 'data-tip': block ? 'On the stat block, its fields run along one line as short pairs, like AC 17, HP 52, Speed 30 ft.' : 'Each field on a line, its label beside its box, like a skill list' }, compact, ' Compact rows'),
+            abil,
             button('↑', () => { if (moveIn(layout.sections, si, -1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} up`, disabled: si === 0 }),
             button('↓', () => { if (moveIn(layout.sections, si, 1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} down`, disabled: si === layout.sections.length - 1 }),
             button('Remove section', async () => {
@@ -713,14 +743,14 @@ const Sheets = (() => {
     });
 
     const save = button(id ? 'Save template' : 'Save template', async () => {
-      const problems = L.validate(layout);
+      const problems = L.validate(layout, vopts);
       if (!name.value.trim()) return toast('Give the template a name', true);
       if (!game.value.trim()) return toast('Say which game it is for', true);
       if (problems.length) return toast(problems[0], true);
       save.disabled = true;
       try {
-        const r = await ctx.post('template_save', { ...(id ? { id, version: t.version } : {}), name: name.value, game: game.value, edition: edition.value,
-          is_listed: listed.checked, layout });
+        const r = await ctx.post('template_save', { ...(id ? { id, version: t.version } : { kind: t.kind }), name: name.value, game: game.value, edition: edition.value,
+          ...(block ? { dice_game: diceGame.value || null } : {}), is_listed: listed.checked, layout });
         toast('Saved');
         closePdf();
         location.hash = `#/templates/${r.template.id}`;
@@ -730,8 +760,10 @@ const Sheets = (() => {
     ctx.mount(
       el('div', { class: 'card' },
         el('a', { href: id ? `#/templates/${id}` : '#/templates', class: 'small' }, id ? '← Back to the template' : '← All templates'),
-        el('h1', {}, id ? `Edit ${t.name}` : 'New sheet template'),
+        el('h1', {}, id ? `Edit ${t.name}` : block ? 'New stat block template' : 'New sheet template'),
+        block ? el('p', { class: 'muted' }, 'A stat block is an NPC\'s numbers in the way a game writes them up, shown on the NPC\'s Encyclopedia page. A compact section runs along one line, a row of scores sits in columns, a list alone in its section gets the section\'s title as a heading (Actions), and every other field is a line led by its label. A text field marked Summary goes under the name.') : null,
         el('div', { class: 'grid3' }, ctx.field('Name', name), ctx.field('Game', game), ctx.field('Edition', edition)),
+        block ? ctx.field('For campaigns whose dice are set to', diceGame) : null,
         el('label', { class: 'small check', 'data-tip': 'Unlisted templates are left out of the library for others, but anyone with the link can still use them' }, listed, ' Listed in the library'),
         el('div', { class: 'row' },
           el('label', { class: 'button small' }, 'Import from PDF', pdfInput),
@@ -987,7 +1019,7 @@ const Sheets = (() => {
   /** Pick a template and a name; GMs also pick PC or NPC, who plays it, and whether it travels with the party.
    * preset (from the Members tab): the name and owner_id to start from; an entry already called that name gets the sheet. */
   async function newCharacter(preset = null) {
-    const { templates } = await ctx.api('templates');
+    const templates = await sheetTemplates();
     if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
     const search = el('input', { type: 'search', placeholder: 'Name or game', 'aria-label': 'Search templates' });
     const pick = el('select', { 'aria-label': 'Template', size: Math.min(8, templates.length + 1), required: true });
@@ -1036,7 +1068,7 @@ const Sheets = (() => {
   }
   /** The template for a sheet made while linking: None (no sheet yet, the first choice), or one of the templates. */
   async function templatePick() {
-    const { templates } = await ctx.api('templates');
+    const templates = await sheetTemplates();
     return el('select', { 'aria-label': 'Template' }, el('option', { value: '' }, 'None (no sheet yet)'),
       templates.map(t => el('option', { value: t.id }, `${t.name} — ${metaLine(t)}`)));
   }
@@ -1068,7 +1100,7 @@ const Sheets = (() => {
 
   /** A GM gives Encyclopedia entry e a character sheet: pick a template, and PC or NPC (NPC to start). */
   async function addToEntry(e) {
-    const { templates } = await ctx.api('templates');
+    const templates = await sheetTemplates();
     if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
     const pick = el('select', { 'aria-label': 'Template', required: true }, templates.map(t => el('option', { value: t.id }, `${t.name} — ${metaLine(t)}`)));
     const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'npc' }, 'NPC (GM only until shown)'), el('option', { value: 'pc' }, 'PC (a player character)'));
@@ -1086,6 +1118,65 @@ const Sheets = (() => {
     });
     document.body.append(d);
     d.showModal();
+  }
+
+  /** The campaign's game, as the dice roller's "Start from a game" id (Settings → Dice), or null. */
+  const campaignGame = () => (typeof DiceSystems !== 'undefined' ? DiceSystems.campaignSystem(ctx.S.camp?.settings?.dice)?.game : null) || null;
+  /** The stat block templates in the order a campaign on dice game `game` is offered them: the starter for its game,
+   * the other blocks for it, the generic starter, then the rest A to Z. */
+  function blockOrder(templates, game) {
+    const rank = t => (game && t.dice_game === game ? (t.starter ? 0 : 1) : !t.dice_game && t.starter ? 2 : 3);
+    return templates.filter(isBlock).map((t, i) => [t, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
+  }
+  /** A GM gives Person entry e a stat block: an NPC nobody plays, on the stat block template picked. The campaign's
+   * game's block is picked to start; a campaign with no game, or a game with no block, starts on the generic one. */
+  async function addStatBlock(e) {
+    const game = campaignGame();
+    const blocks = blockOrder((await ctx.api('templates')).templates, game);
+    if (!blocks.length) return toast('There are no stat block templates yet. A site admin loads the starters on Site Admin, or make one in Sheet templates', true);
+    const mine = game && blocks[0].dice_game === game;
+    const gameName = game ? DiceSystems.PRESETS.find(g => g.id === game)?.name || null : null;
+    const pick = el('select', { 'aria-label': 'Stat block', required: true }, blocks.map((t, i) =>
+      el('option', { value: t.id }, `${t.name}${i === 0 && mine ? ' (the campaign\'s game)' : ''}${t.starter ? '' : ` — by ${t.author}`}`)));
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': `A stat block for ${e.name}` },
+      el('form', { method: 'dialog' }, el('h3', {}, `A stat block for ${e.name}`),
+        el('p', { class: 'small muted' }, mine ? `The campaign's dice are set to ${gameName}, so its stat block is picked.`
+          : gameName ? `There is no stat block for ${gameName} yet, so the generic one is picked.`
+          : 'The campaign has no game picked under Settings → Dice, so the generic one is picked.'),
+        ctx.field('Stat block', pick),
+        el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Add stat block'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel'))));
+    d.addEventListener('close', async () => {
+      d.remove();
+      if (d.returnValue !== 'ok') return;
+      try {
+        const r = await ctx.post('character_create', { template_id: Number(pick.value), entry_id: e.id, kind: 'npc', owner_id: 0 }, cid());
+        // straight to the block on its own page, where it is filled in
+        location.hash = `#/c/${cid()}/characters/${r.character.id}`;
+      } catch (err) { toast(err.message, true); }
+    });
+    document.body.append(d);
+    d.showModal();
+  }
+  /** The stat block of the character on an Encyclopedia entry (ch: its row in S.encChars), for the entry's page: the
+   * block in full, its tracks (hit points) changed and its numbers rolled right there by a GM, and Full stat block to
+   * open it on its own page. Drawn once the character has come; nothing for a member the block is hidden from. */
+  function entryBlock(ch, name) {
+    const card = el('div', { class: 'card statblock-card', 'aria-label': `${name}'s stat block` }, el('p', { class: 'small muted' }, 'Loading the stat block…'));
+    const campaign = cid();
+    ctx.api('character', { query: { cid: campaign, id: ch.id } }).then(({ character: c }) => {
+      if (!c.sheet_visible || !c.values) return card.remove();
+      const values = { ...c.values };
+      // a GM changes an NPC nobody plays without pressing Edit; anyone else's block is changed on its own page
+      const can = !!c.can_edit && !c.owner;
+      const sender = fieldSender(c.id, err => { toast(err.message, true); ctx.route(); });
+      for (const [k, v] of Object.entries(values)) sender.known(k, v);
+      const roll = ctx.rollFromSheet && c.can_edit ? x => ctx.rollFromSheet({ ...x, label: `${c.name}: ${x.label}` }) : null;
+      fill(card,
+        StatBlock.render(c.layout, values, { sub: c.template.name, can, send: (k, v) => sender.send(k, v), rollOf, roll, caps: c.pip_caps || {} }),
+        el('div', { class: 'row card-foot' }, el('a', { class: 'button small', href: `#/c/${campaign}/characters/${c.id}`,
+          'data-tip': c.can_edit ? 'Open the stat block on its own page, to fill it in or change it' : 'Open the stat block on its own page' }, 'Full stat block')));
+    }).catch(() => card.remove());
+    return card;
   }
 
   /** The settings strip: name, PC or NPC, whose sheet, shown to players, the active character. */
@@ -1231,7 +1322,9 @@ const Sheets = (() => {
     const r = await ctx.api('character', { query: { cid: cid(), id } });
     const ch = r.character;
     const mine = ch.owner?.id === me();
-    const gmOnOthers = ch.can_edit && !mine;   // a GM on a sheet that isn't theirs presses Edit first
+    // a GM on a sheet that isn't theirs presses Edit first; a stat block nobody plays is the GMs' own, open to change
+    const gmBlock = ch.can_edit && ch.statblock && !ch.owner;
+    const gmOnOthers = ch.can_edit && !mine && !gmBlock;
     let editing = false;
     const values = ch.values ? { ...ch.values } : {};
     let hidden = ch.hidden || [];
@@ -1276,7 +1369,7 @@ const Sheets = (() => {
         if (err.status === 409) ctx.route();
       }
     }
-    const canChange = () => mine || (gmOnOthers && editing);
+    const canChange = () => mine || gmBlock || (gmOnOthers && editing);
     // its player and the GMs roll from it on the dice roller, named for the character (the log already names the
     // roller's active character as who rolled)
     const playing = () => Number(ctx.S.members?.find(m => Number(m.id) === me())?.active_character_id) === ch.id;
@@ -1292,7 +1385,7 @@ const Sheets = (() => {
         holdings: ctx.holdingsPanel ? () => ctx.holdingsPanel(ch) : null,
         onChange: (k, v) => sender.send(k, v),
         onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
-        onRoll: rollHere, caps,
+        onRoll: rollHere, caps, statblock: !!ch.statblock,
         onCap: capping ? (k, n) => save({ pip_caps: { [k]: n } }) : null,
       });
       fill(body,
@@ -1413,10 +1506,11 @@ const Sheets = (() => {
     const [a, b] = parts;
     if (!a) return renderLibrary();
     if (a === 'new') return renderEditor(null);
+    if (a === 'new-block') return renderEditor(null, 'statblock');
     if (/^\d+$/.test(a) && b === 'edit') return renderEditor(Number(a));
     if (/^\d+$/.test(a)) return renderTemplate(Number(a));
     return renderLibrary();
   }
 
-  return { mount, route, campaignRoute, newCharacter, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, linkMember, linkToMember, templatePick, closePdf, stopPresence };
+  return { mount, route, campaignRoute, rollOf, addStatBlock, entryBlock, blockOrder, newCharacter, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, linkMember, linkToMember, templatePick, closePdf, stopPresence };
 })();

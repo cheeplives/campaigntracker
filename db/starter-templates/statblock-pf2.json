@@ -1,0 +1,221 @@
+{
+  "name": "Pathfinder 2e stat block",
+  "game": "Pathfinder",
+  "edition": "2e stat block",
+  "kind": "statblock",
+  "dice_game": "pf2",
+  "source": {
+    "title": "Pathfinder Monster Core (creature stat block format)",
+    "owner": "Paizo",
+    "url": "https://paizo.com/orclicense",
+    "licence": "ORC Licence"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "traits",
+            "label": "Traits",
+            "type": "text",
+            "summary": true
+          },
+          {
+            "key": "level",
+            "label": "Level",
+            "type": "number"
+          },
+          {
+            "key": "perception",
+            "label": "Perception",
+            "type": "number"
+          },
+          {
+            "key": "senses",
+            "label": "Senses",
+            "type": "text"
+          },
+          {
+            "key": "languages",
+            "label": "Languages",
+            "type": "text"
+          },
+          {
+            "key": "skills",
+            "label": "Skills",
+            "type": "text"
+          },
+          {
+            "key": "items",
+            "label": "Items",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_attributes",
+        "title": "Attributes",
+        "abilities": true,
+        "fields": [
+          {
+            "key": "str",
+            "label": "Str",
+            "type": "number"
+          },
+          {
+            "key": "dex",
+            "label": "Dex",
+            "type": "number"
+          },
+          {
+            "key": "con",
+            "label": "Con",
+            "type": "number"
+          },
+          {
+            "key": "int",
+            "label": "Int",
+            "type": "number"
+          },
+          {
+            "key": "wis",
+            "label": "Wis",
+            "type": "number"
+          },
+          {
+            "key": "cha",
+            "label": "Cha",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_defences",
+        "title": "Defences",
+        "compact": true,
+        "fields": [
+          {
+            "key": "ac",
+            "label": "AC",
+            "type": "number"
+          },
+          {
+            "key": "fort",
+            "label": "Fort",
+            "type": "number"
+          },
+          {
+            "key": "ref",
+            "label": "Ref",
+            "type": "number"
+          },
+          {
+            "key": "will",
+            "label": "Will",
+            "type": "number"
+          },
+          {
+            "key": "hp",
+            "label": "HP",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "immunities",
+            "label": "Immunities",
+            "type": "text"
+          },
+          {
+            "key": "weaknesses",
+            "label": "Weaknesses",
+            "type": "text"
+          },
+          {
+            "key": "resistances",
+            "label": "Resistances",
+            "type": "text"
+          },
+          {
+            "key": "speed",
+            "label": "Speed",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_strikes",
+        "title": "Strikes",
+        "fields": [
+          {
+            "key": "strikes",
+            "label": "Strikes",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "bonus",
+                "label": "Bonus"
+              },
+              {
+                "key": "damage",
+                "label": "Damage"
+              },
+              {
+                "key": "traits",
+                "label": "Traits"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_abilities",
+        "title": "Abilities",
+        "fields": [
+          {
+            "key": "special_abilities",
+            "label": "Abilities",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_spells",
+        "title": "Spells",
+        "fields": [
+          {
+            "key": "spells",
+            "label": "Spells",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "notes",
+                "label": "Notes"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

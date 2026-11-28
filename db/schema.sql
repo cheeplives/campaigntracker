@@ -838,6 +838,8 @@ CREATE TABLE IF NOT EXISTS sheet_templates (
   name VARCHAR(150) NOT NULL,
   game VARCHAR(100) NOT NULL,
   edition VARCHAR(60) NOT NULL DEFAULT '',
+  kind ENUM('sheet','statblock') NOT NULL DEFAULT 'sheet',   -- a character sheet, or an NPC stat block drawn on its Encyclopedia page (062)
+  dice_game VARCHAR(20) NULL,                         -- a stat block's game, an id from the dice roller's games (dnd5e); NULL: a sheet, or any game (062)
   author_id BIGINT UNSIGNED NULL,
   forked_from_id INT UNSIGNED NULL,
   layout MEDIUMTEXT NOT NULL,

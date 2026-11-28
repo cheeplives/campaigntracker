@@ -1932,6 +1932,34 @@ button.sheet-portrait { cursor: pointer; }
 .enc-fact { color: var(--dim); } .enc-fact::before { content: '· '; opacity: .6; }
 .chip.kind-pc { background: var(--ok); }
 .chip.kind-npc { background: var(--secret); }
+/* An NPC's stat block on its entry's page (static/statblock.js): a flat panel with the NPC edge, runs of "Label value"
+ * pairs between thin rules, a row of scores, and a paragraph for each action. */
+.statblock-card { border-left: 4px solid var(--secret); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.statblock { min-width: 0; }
+.statblock .sb-name { margin: 0 0 2px; font-size: 1.15rem; }
+.statblock .sb-sub { color: var(--dim); font-style: italic; font-size: .9rem; margin-bottom: 8px; }
+.statblock .sb-rule { height: 1px; background: var(--line); margin: 8px 0; }
+.statblock .sb-kv { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; }
+.statblock .sb-pair { min-width: 0; overflow-wrap: anywhere; }
+.statblock .sb-has-track { display: inline-flex; align-items: center; gap: 6px; }
+.statblock .sb-track { display: inline-flex; align-items: center; gap: 6px; }
+.statblock input.sb-cur { width: 64px; height: var(--ctl-h-sm); padding: 0 4px; text-align: center; }
+.statblock .sb-pips { display: inline-flex; vertical-align: middle; }
+.statblock .sb-abil { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px 4px; text-align: center; }
+.statblock .sb-abil.sb-n1 { grid-template-columns: repeat(1, minmax(0, 1fr)); } .statblock .sb-abil.sb-n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.statblock .sb-abil.sb-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .statblock .sb-abil.sb-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.statblock .sb-abil.sb-n5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.statblock .sb-abil b { display: block; font-size: .78rem; color: var(--label); }
+.statblock .sb-p { margin: 4px 0; overflow-wrap: anywhere; }
+.statblock .sb-p > b:first-child, .statblock .sb-row > b { font-family: var(--disp); font-weight: 600; }
+.statblock .sb-long { white-space: pre-line; }
+.statblock .sb-sec { font-size: 1rem; margin: 10px 0 2px; padding-bottom: 2px; border-bottom: 1px solid var(--line); }
+.statblock button.sb-roll { color: var(--text); padding: 0; font: inherit; line-height: inherit; text-decoration: underline dotted var(--accent); text-underline-offset: 3px; cursor: pointer; }
+.statblock button.sb-roll:hover { text-decoration-style: solid; }
+.statblock .sb-toggle.on { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); color: var(--text); border-color: var(--accent); }
+.statblock-card .card-foot { margin-top: 2px; }
+@media (max-width: 520px) { .statblock .sb-abil, .statblock .sb-abil.sb-n4, .statblock .sb-abil.sb-n5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .statblock .sb-abil.sb-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (pointer: coarse) { .statblock input.sb-cur { height: 44px; } .statblock button.sb-roll { min-height: 0; padding: 4px 2px; } }
 .enc-sheet { cursor: pointer; }
 .enc-kinds { margin-right: 6px; }
 .sheet-old dd { overflow-wrap: anywhere; margin: 0; }

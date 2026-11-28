@@ -1,0 +1,192 @@
+{
+  "name": "Savage Worlds stat block",
+  "game": "Savage Worlds",
+  "edition": "Adventure Edition stat block",
+  "kind": "statblock",
+  "dice_game": "savage",
+  "source": {
+    "title": "Savage Worlds Adventure Edition (character and creature format)",
+    "owner": "Pinnacle Entertainment Group",
+    "url": "https://peginc.com/",
+    "licence": null
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "wild_card",
+            "label": "Wild Card",
+            "type": "checkbox"
+          },
+          {
+            "key": "wounds",
+            "label": "Wounds",
+            "type": "pips",
+            "count": 3,
+            "play": true
+          },
+          {
+            "key": "shaken",
+            "label": "Shaken",
+            "type": "checkbox",
+            "play": true
+          },
+          {
+            "key": "bennies",
+            "label": "Bennies",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_attributes",
+        "title": "Attributes",
+        "abilities": true,
+        "fields": [
+          {
+            "key": "agility",
+            "label": "Agility",
+            "type": "choice",
+            "options": [
+              "d4",
+              "d6",
+              "d8",
+              "d10",
+              "d12"
+            ]
+          },
+          {
+            "key": "smarts",
+            "label": "Smarts",
+            "type": "choice",
+            "options": [
+              "d4",
+              "d6",
+              "d8",
+              "d10",
+              "d12"
+            ]
+          },
+          {
+            "key": "spirit",
+            "label": "Spirit",
+            "type": "choice",
+            "options": [
+              "d4",
+              "d6",
+              "d8",
+              "d10",
+              "d12"
+            ]
+          },
+          {
+            "key": "strength",
+            "label": "Strength",
+            "type": "choice",
+            "options": [
+              "d4",
+              "d6",
+              "d8",
+              "d10",
+              "d12"
+            ]
+          },
+          {
+            "key": "vigor",
+            "label": "Vigor",
+            "type": "choice",
+            "options": [
+              "d4",
+              "d6",
+              "d8",
+              "d10",
+              "d12"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_derived",
+        "title": "Derived",
+        "compact": true,
+        "fields": [
+          {
+            "key": "pace",
+            "label": "Pace",
+            "type": "number"
+          },
+          {
+            "key": "parry",
+            "label": "Parry",
+            "type": "number"
+          },
+          {
+            "key": "toughness",
+            "label": "Toughness",
+            "type": "number"
+          },
+          {
+            "key": "armour",
+            "label": "Armour",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_details",
+        "title": "Details",
+        "fields": [
+          {
+            "key": "skills",
+            "label": "Skills",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "edges",
+            "label": "Edges",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "hindrances",
+            "label": "Hindrances",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "gear",
+            "label": "Gear",
+            "type": "text",
+            "size": "full"
+          }
+        ]
+      },
+      {
+        "key": "s_special_abilities",
+        "title": "Special abilities",
+        "fields": [
+          {
+            "key": "special_abilities",
+            "label": "Special abilities",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Blades in the Dark NPC",
+  "game": "Blades in the Dark",
+  "edition": "NPC",
+  "kind": "statblock",
+  "dice_game": "blades",
+  "source": {
+    "title": "Blades in the Dark SRD (NPC and faction notes)",
+    "owner": "John Harper, One Seven Design",
+    "url": "https://bladesinthedark.com/",
+    "licence": "CC BY 3.0"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "role",
+            "label": "Role",
+            "type": "text",
+            "summary": true
+          },
+          {
+            "key": "tier",
+            "label": "Tier",
+            "type": "number"
+          },
+          {
+            "key": "quality",
+            "label": "Quality",
+            "type": "number"
+          },
+          {
+            "key": "harm",
+            "label": "Harm to put them down",
+            "type": "pips",
+            "count": 8,
+            "play": true
+          }
+        ]
+      },
+      {
+        "key": "s_details",
+        "title": "Details",
+        "fields": [
+          {
+            "key": "traits",
+            "label": "Traits",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "wants",
+            "label": "Wants",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "preferred_methods",
+            "label": "Preferred methods",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "faction",
+            "label": "Faction",
+            "type": "text",
+            "size": "full"
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}

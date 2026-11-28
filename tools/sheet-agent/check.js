@@ -28,10 +28,11 @@ function check(file) {
   if (!(s && typeof s.title === 'string' && s.title.trim() && typeof s.owner === 'string' && s.owner.trim() && /^https?:\/\//.test(s.url || '')))
     out.push('a source: { title, owner, url } for the sheet it was built from');
   if (!t.layout || typeof t.layout !== 'object') return [...out, 'a layout: { sections: [...] }'];
-  out.push(...L.validate(t.layout));
+  const statblock = t.kind === 'statblock';   // an NPC stat block: its own section kinds, and no Holdings page
+  out.push(...L.validate(t.layout, { statblock }));
   const fields = L.fields(t.layout);
   if (fields.size <= 3) out.push('more than three fields');
-  if (!L.hasHoldings(t.layout)) out.push('the Holdings page: add ' + JSON.stringify(L.holdingsSection()) + ' as the last section');
+  if (!statblock && !L.hasHoldings(t.layout)) out.push('the Holdings page: add ' + JSON.stringify(L.holdingsSection()) + ' as the last section');
   for (const [, { field }] of fields) if (typeof field.label === 'string' && field.label.length > 60) out.push(`"${field.label.slice(0, 40)}…": a label, not rules text (60 characters at most)`);
   return out;
 }

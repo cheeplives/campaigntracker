@@ -162,6 +162,8 @@ function upgrade_steps(): array {
         ['061_guide_prompt.sql', fn(PDO $p) => db_has_table($p, 'campaign_guides')
                 && strtolower((string)($p->query("SHOW COLUMNS FROM `campaign_guides` LIKE 'guide_json'")->fetch(PDO::FETCH_ASSOC)['Type'] ?? '')) === 'text',
             'The Assistant\'s campaign guide has room for a campaign prompt: a longer brief with the campaign\'s agenda, principles and what is in motion.'],
+        ['062_statblocks.sql', fn(PDO $p) => !db_has_column($p, 'sheet_templates', 'kind'),
+            'Added NPC stat blocks: short blocks in a game\'s own NPC format on a Person entry\'s page. Load the stat block starters with Site Admin → Sheets → Load starter templates.'],
     ];
 }
 
