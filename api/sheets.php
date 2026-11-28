@@ -20,9 +20,16 @@ const SHEET_VTT_NAME = '/^[a-z][a-z0-9_]{0,19}$/';
 const SHEET_VTT_SYSTEM = '/^[A-Za-z0-9_.-]{1,60}$/';
 const SHEET_VTT_PATH = '/^[A-Za-z0-9_.\[\]-]{1,200}$/';
 const SHEET_VTT_MAX = 8;
+// A stat block's game: the ids of the dice roller's "Start from a game" list (static/dice-systems.js PRESETS; the
+// stat block tests check the two lists match).
+const DICE_GAMES = ['dnd5e', 'pf1', 'pf2', 'sotdl', 'cpred', 'traveller', 'age', 'd6', 'fate', 'rolemaster', 'pbta', 'ironsworn', 'daggerheart',
+    'coc7', 'brp', 'deltagreen', 'wfrp4', 'ua', 'gurps', 'questworlds', 'cairn', 'v20', 'cofd', 'exalted', 'sr5', 'yze', 't2k4', 'blades', 'sorcerer',
+    'l5r', 'ore', 'genesys', 'savage', 'oracle'];
 
-/** A layout as sent, checked and with only the properties it may have; fails with the first problem. */
-function sheet_layout_in($layout): array {
+/** A layout as sent, checked and with only the properties it may have; fails with the first problem. A stat block's
+ * ($statblock) section may be its abilities row (abilities: true), with how a score's modifier is worked out
+ * (modifier: 'dnd'). */
+function sheet_layout_in($layout, bool $statblock = false): array {
     $L = SHEET_LIMITS;
     if (!is_array($layout) || !isset($layout['sections']) || !is_array($layout['sections']) || !array_is_list($layout['sections']))
         fail('A template needs a list of sections');
@@ -54,12 +61,23 @@ function sheet_layout_in($layout): array {
             if (!is_bool($s['compact'])) fail("Section \"{$sec['title']}\": compact is on or off");
             if ($s['compact']) $sec['compact'] = true;
         }
+        // a stat block's row of ability scores, each in its own column, with the modifier a score gives beside it
+        if (!empty($s['abilities']) || isset($s['modifier'])) {
+            if (!$statblock) fail('Only a stat block has an abilities row');
+            if (isset($s['abilities']) && !is_bool($s['abilities'])) fail("Section \"{$sec['title']}\": abilities is on or off");
+            if (!empty($s['abilities'])) $sec['abilities'] = true;
+            if (isset($s['modifier'])) {
+                if ($s['modifier'] !== 'dnd' || empty($s['abilities'])) fail("Section \"{$sec['title']}\": a modifier is \"dnd\", on an abilities row");
+                $sec['modifier'] = 'dnd';
+            }
+        }
         // the Holdings page: the character's own funds, gear and holdings, drawn like Party → Holdings, in place of fields
         if (isset($s['holdings'])) {
             if (!is_bool($s['holdings'])) fail("Section \"{$sec['title']}\": holdings is on or off");
             if ($s['holdings']) {
                 if ($s['fields']) fail("Section \"{$sec['title']}\": a Holdings section has no fields of its own");
                 if ($holdings) fail('A template can have one Holdings section');
+                if ($statblock) fail('A stat block has no Holdings page');
                 $sec['holdings'] = $holdings = true;
             }
         }
@@ -136,7 +154,7 @@ function sheet_layout_in($layout): array {
 
 /** Templates with their author, use and fork counts and the template each was forked from, A to Z by name; $where is SQL on t. */
 function templates_query(string $where, array $args): array {
-    $st = db()->prepare("SELECT t.id, t.name, t.game, t.edition, t.author_id, t.forked_from_id, t.version, t.is_listed, t.starter_key, t.updated_at,
+    $st = db()->prepare("SELECT t.id, t.name, t.game, t.edition, t.kind, t.dice_game, t.author_id, t.forked_from_id, t.version, t.is_listed, t.starter_key, t.updated_at,
             " . user_name_sql() . " AS author, o.name AS forked_from_name,
             (SELECT COUNT(*) FROM sheet_characters c WHERE c.template_id=t.id) AS uses,
             (SELECT COUNT(*) FROM sheet_templates f WHERE f.forked_from_id=t.id) AS forks
@@ -149,6 +167,7 @@ function template_out(array $t): array {
     $me = me();
     $mine = $t['author_id'] !== null && (int)$t['author_id'] === $me['id'];
     return ['id' => (int)$t['id'], 'name' => $t['name'], 'game' => $t['game'], 'edition' => $t['edition'],
+        'kind' => $t['kind'], 'dice_game' => $t['dice_game'],
         'author' => $t['author_id'] === null ? ($t['starter_key'] !== null ? 'GM\'s Almanac' : 'Someone') : (string)$t['author'],
         'mine' => $mine, 'can_edit' => $mine || $me['is_admin'], 'is_listed' => (bool)$t['is_listed'], 'version' => (int)$t['version'],
         'uses' => (int)$t['uses'], 'forks' => (int)$t['forks'],
@@ -205,28 +224,35 @@ function templates_action(string $action): void {
             if ($name === '') fail('Give the template a name');
             if ($game === '') fail('Say which game it is for');
             $edition = trim((string)str_in(p('edition'), 60));
-            $layout = json_encode(sheet_layout_in(p('layout')), JSON_UNESCAPED_UNICODE);
             $id = p('id') ? int_in(p('id'), 1) : null;
+            $t = $id ? template_row($id) : null;
+            // a sheet or a stat block, said when it is made and kept from then on: its characters are drawn by it
+            $kind = $t ? $t['kind'] : (p('kind') ?? 'sheet');
+            if (!in_array($kind, ['sheet', 'statblock'], true)) fail('A template is a sheet or a stat block');
+            if ($t && p('kind') !== null && p('kind') !== $kind) fail('A template stays a sheet or a stat block. Make a new one instead');
+            $diceGame = p('dice_game') === null || p('dice_game') === '' ? null : p('dice_game');
+            if ($diceGame !== null && $kind !== 'statblock') fail('Only a stat block is for a dice game');
+            if ($diceGame !== null && !in_array($diceGame, DICE_GAMES, true)) fail('That is not one of the dice roller\'s games');
+            $layout = json_encode(sheet_layout_in(p('layout'), $kind === 'statblock'), JSON_UNESCAPED_UNICODE);
             if ($id) {
-                $t = template_row($id);
                 need_template_editor($t);
                 $listed = p('is_listed') === null ? (int)$t['is_listed'] : (p('is_listed') ? 1 : 0);
-                $st = db()->prepare('UPDATE sheet_templates SET name=?, game=?, edition=?, layout=?, is_listed=?, version=version+1 WHERE id=? AND version=?');
-                $st->execute([$name, $game, $edition, $layout, $listed, $id, int_in(p('version'), 1)]);
+                $st = db()->prepare('UPDATE sheet_templates SET name=?, game=?, edition=?, dice_game=?, layout=?, is_listed=?, version=version+1 WHERE id=? AND version=?');
+                $st->execute([$name, $game, $edition, $diceGame, $layout, $listed, $id, int_in(p('version'), 1)]);
                 if (!$st->rowCount()) fail('This template was saved by someone else after you opened it. Reload it and make your change again', 409, 'stale');
                 // the sheets its author plays, or runs as a GM, follow it at once; anyone else's wait for their player or GM to take the change
                 characters_take_template("c.template_id=? AND (c.owner_id=? OR EXISTS (SELECT 1 FROM campaign_members m WHERE m.campaign_id=c.campaign_id AND m.user_id=? AND m.role='gm'))", [$id, $me['id'], $me['id']]);
             } else {
-                db()->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, layout, is_listed) VALUES (?,?,?,?,?,?)')
-                    ->execute([$name, $game, $edition, $me['id'], $layout, p('is_listed') === false ? 0 : 1]);
+                db()->prepare('INSERT INTO sheet_templates (name, game, edition, kind, dice_game, author_id, layout, is_listed) VALUES (?,?,?,?,?,?,?,?)')
+                    ->execute([$name, $game, $edition, $kind, $diceGame, $me['id'], $layout, p('is_listed') === false ? 0 : 1]);
                 $id = (int)db()->lastInsertId();
             }
             out(['ok' => true, 'template' => template_full($id)]);
         case 'template_fork':
             $t = template_row(int_in(p('id'), 1));
             need_template_visible($t);
-            db()->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, forked_from_id, layout) VALUES (?,?,?,?,?,?)')
-                ->execute([$t['name'], $t['game'], $t['edition'], $me['id'], $t['id'], json_encode($t['layout'], JSON_UNESCAPED_UNICODE)]);
+            db()->prepare('INSERT INTO sheet_templates (name, game, edition, kind, dice_game, author_id, forked_from_id, layout) VALUES (?,?,?,?,?,?,?,?)')
+                ->execute([$t['name'], $t['game'], $t['edition'], $t['kind'], $t['dice_game'], $me['id'], $t['id'], json_encode($t['layout'], JSON_UNESCAPED_UNICODE)]);
             out(['ok' => true, 'template' => template_full((int)db()->lastInsertId())]);
         case 'sheet_import_fetch':
             // a character from Pathbuilder 2e (its Export JSON link) or D&D Beyond (a public character's page), fetched
@@ -358,7 +384,7 @@ function character_row(int $cid, int $id, bool $isGm): array {
 }
 /** The characters of campaign $cid this member can see (players don't see those of GM-only entries), or just $id. */
 function character_rows(int $cid, bool $isGm, ?int $id = null): array {
-    $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, COALESCE(c.layout, t.layout) AS layout, t.version AS tversion,
+    $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.kind AS template_kind, COALESCE(c.layout, t.layout) AS layout, t.version AS tversion,
             ' . user_name_sql() . ' AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign, m.role AS owner_role,
             pa.id AS portrait_file, pa.is_secret AS portrait_secret, pa.frame_x, pa.frame_y, pa.frame_zoom
         FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
@@ -401,6 +427,7 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'owner' => $c['owner_id'] !== null ? ['id' => (int)$c['owner_id'], 'name' => (string)$c['owner_name']] : null,
         'owner_in_campaign' => (bool)$c['owner_in_campaign'], 'secret' => (bool)(int)$c['entry_secret'],
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
+        'statblock' => $c['template_kind'] === 'statblock',
         'play' => $play, 'has_play' => $hasPlay, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => character_pic($c, $isGm, $pics), 'portrait_id' => $c['portrait_file'] !== null && ($isGm || !(int)$c['portrait_secret']) ? (int)$c['portrait_file'] : null,
         'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'owner_is_player' => $c['owner_role'] === 'player'];
@@ -412,7 +439,7 @@ function characters_by_entry(int $cid, bool $isGm): array {
     foreach (character_rows($cid, $isGm) as $c) {
         $card = character_card($c, $isGm);
         $out[$card['entry_id']] = ['id' => $card['id'], 'kind' => $card['kind'], 'sheet_visible' => $card['sheet_visible'],
-            'owner' => $card['owner'], 'game' => $card['template']['game'], 'summary' => $card['summary'],
+            'owner' => $card['owner'], 'game' => $card['template']['game'], 'summary' => $card['summary'], 'statblock' => $card['statblock'],
             'pic' => $card['pic']];   // the portrait picked on the sheet (null: the entry's first picture stands in)
     }
     return $out;
@@ -585,7 +612,8 @@ function characters_action(string $action, int $cid): void {
             $c = character_row($cid, int_in(p('id'), 1), $isGm);
             if (!character_full($c, $isGm)) fail('Only its player or a GM can change this sheet', 403);
             $mine = $c['owner_id'] !== null && (int)$c['owner_id'] === $me['id'];
-            if (!$mine) {
+            // a stat block nobody plays is the GMs' own: its hit points are ticked from its entry's page, with no Edit first
+            if (!$mine && !($c['template_kind'] === 'statblock' && $c['owner_id'] === null)) {
                 $st = db()->prepare('SELECT 1 FROM sheet_presence WHERE character_id=? AND user_id=? AND editing=1 AND seen_at > NOW() - INTERVAL ' . PRESENCE_SECONDS . ' SECOND');
                 $st->execute([$c['id'], $me['id']]);
                 if (!$st->fetchColumn()) fail('Press Edit first', 409, 'not_editing');
@@ -896,17 +924,19 @@ function starter_templates_load(): void {
         $game = trim((string)($t['game'] ?? ''));
         if ($name === '' || $game === '') { $pdo->rollBack(); fail("The starter file $key.json needs a name and a game"); }
         $edition = mb_substr(trim((string)($t['edition'] ?? '')), 0, 60);
-        $layout = json_encode(sheet_layout_in($t['layout'] ?? null), JSON_UNESCAPED_UNICODE);
-        $st = $pdo->prepare('SELECT id, name, game, edition, layout FROM sheet_templates WHERE starter_key=?');
+        $kind = ($t['kind'] ?? 'sheet') === 'statblock' ? 'statblock' : 'sheet';
+        $diceGame = $kind === 'statblock' && in_array($t['dice_game'] ?? null, DICE_GAMES, true) ? $t['dice_game'] : null;
+        $layout = json_encode(sheet_layout_in($t['layout'] ?? null, $kind === 'statblock'), JSON_UNESCAPED_UNICODE);
+        $st = $pdo->prepare('SELECT id, name, game, edition, kind, dice_game, layout FROM sheet_templates WHERE starter_key=?');
         $st->execute([$key]);
         $row = $st->fetch();
         if (!$row) {
-            $pdo->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, layout, is_listed, starter_key) VALUES (?,?,?,NULL,?,1,?)')
-                ->execute([mb_substr($name, 0, 150), mb_substr($game, 0, 100), $edition, $layout, $key]);
+            $pdo->prepare('INSERT INTO sheet_templates (name, game, edition, kind, dice_game, author_id, layout, is_listed, starter_key) VALUES (?,?,?,?,?,NULL,?,1,?)')
+                ->execute([mb_substr($name, 0, 150), mb_substr($game, 0, 100), $edition, $kind, $diceGame, $layout, $key]);
             $added++;
-        } elseif ([$row['name'], $row['game'], (string)$row['edition']] !== [$name, $game, $edition] || json_decode($row['layout'], true) !== json_decode($layout, true)) {
-            $pdo->prepare('UPDATE sheet_templates SET name=?, game=?, edition=?, layout=?, version=version+1 WHERE id=?')
-                ->execute([mb_substr($name, 0, 150), mb_substr($game, 0, 100), $edition, $layout, $row['id']]);
+        } elseif ([$row['name'], $row['game'], (string)$row['edition'], $row['kind'], $row['dice_game']] !== [$name, $game, $edition, $kind, $diceGame] || json_decode($row['layout'], true) !== json_decode($layout, true)) {
+            $pdo->prepare('UPDATE sheet_templates SET name=?, game=?, edition=?, kind=?, dice_game=?, layout=?, version=version+1 WHERE id=?')
+                ->execute([mb_substr($name, 0, 150), mb_substr($game, 0, 100), $edition, $kind, $diceGame, $layout, $row['id']]);
             $updated++;
         } else $unchanged++;
     }
@@ -918,7 +948,7 @@ function starter_sources(): void {
     $out = [];
     foreach (starter_files() as $t) {
         $s = is_array($t['source'] ?? null) ? $t['source'] : [];
-        $out[] = ['game' => (string)($t['game'] ?? ''), 'edition' => (string)($t['edition'] ?? ''),
+        $out[] = ['game' => (string)($t['game'] ?? ''), 'edition' => (string)($t['edition'] ?? ''), 'statblock' => ($t['kind'] ?? '') === 'statblock',
             'source' => ['title' => (string)($s['title'] ?? ''), 'owner' => (string)($s['owner'] ?? ''), 'url' => (string)($s['url'] ?? ''),
                 'licence' => isset($s['licence']) && is_string($s['licence']) ? $s['licence'] : null]];
     }

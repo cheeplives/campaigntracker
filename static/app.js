@@ -5068,7 +5068,7 @@
     // Add character sheet, shown while the Category picked is Person (or none)
     const ch = e.id ? S.encChars?.[e.id] || null : null;
     const sheetBtn = !e.id || typeof Sheets === 'undefined' ? null
-      : ch ? (ch.sheet_visible ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null)
+      : ch ? (ch.sheet_visible ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': ch.statblock ? `Open ${e.name}'s stat block on its own page` : `Open ${e.name}'s character sheet` }, ch.statblock ? 'Full stat block' : 'Open sheet') : null)
       : isGM() ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for a PC or an NPC with stats') : null;
     const memberBtn = e.id && typeof Sheets !== 'undefined' && isGM()
       ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null;
@@ -5077,15 +5077,18 @@
       category.addEventListener('change', fit);
       fit();
     }
+    // Add stat block: an NPC's numbers in the campaign's game's own format, shown on the entry's page (static/statblock.js)
+    const blockBtn = e.id && !ch && typeof Sheets !== 'undefined' && isGM()
+      ? btn('Add stat block', () => Sheets.addStatBlock(e).catch(err => toast(err.message, true)), 'small', 'Give this person a stat block: their numbers in the way the campaign\'s game writes up an NPC, shown on their page') : null;
     if (sheetBtn && !ch) {
-      const fit = () => { sheetBtn.style.display = ['', 'person'].includes(category.value) ? '' : 'none'; };
+      const fit = () => { sheetBtn.style.display = ['', 'person'].includes(category.value) ? '' : 'none'; if (blockBtn) blockBtn.style.display = sheetBtn.style.display; };
       category.addEventListener('change', fit);
       fit();
     }
     const f = el('form', { class: 'enc-form' },
       // Open sheet stays beside the title; Add character sheet, Link a member and the tools wait in the ⋯ menu, as on the page
       el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row enc-actions' }, ch ? sheetBtn : null,
-        e.id ? entryMenu(e, [ch ? null : sheetBtn, memberBtn, ...(opt.tools || [])]) : null)),
+        e.id ? entryMenu(e, [blockBtn, ch ? null : sheetBtn, memberBtn, ...(opt.tools || [])]) : null)),
       e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
@@ -7228,12 +7231,18 @@
     const body = el('div', {}, el('p', { class: 'muted small' }, 'Loading…'));
     fetch('api/index.php?a=starter_sources', { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(r => r.json()).then(({ starters }) => {
       if (!starters?.length) return body.closest('section')?.remove();
+      const blocks = starters.filter(st => st.statblock);
+      const row = st => [[st.game, st.edition ? ` (${st.edition})` : ''].join(''),
+        el('span', {}, st.source.url ? extLink({ url: st.source.url, title: st.source.title || st.source.url }) : st.source.title,
+          el('span', { class: 'muted' }, ` · ${st.source.owner}${st.source.licence ? ` (${st.source.licence})` : ''}`))];
       body.replaceChildren(
         el('p', {}, 'Each starter template in the sheet template library is this app\'s own list of field labels and sections, made from the character sheet named beside its game. No artwork, logos or rules text are copied. ',
           'Not affiliated with or endorsed by the publishers.'),
-        aboutTable(['Game', 'Built from'], starters.map(st => [[st.game, st.edition ? ` (${st.edition})` : ''].join(''),
-          el('span', {}, st.source.url ? extLink({ url: st.source.url, title: st.source.title || st.source.url }) : st.source.title,
-            el('span', { class: 'muted' }, ` · ${st.source.owner}${st.source.licence ? ` (${st.source.licence})` : ''}`))])));
+        aboutTable(['Game', 'Built from'], starters.filter(st => !st.statblock).map(row)),
+        // NPC stat blocks: the same, from the way each game writes up a non-player character
+        blocks.length ? el('h3', {}, 'NPC stat blocks') : null,
+        blocks.length ? el('p', {}, 'Each stat block starter is this app\'s own list of field labels, in the order the game named beside it writes up a non-player character or creature. Every block starts empty: no creature, statistics or rules text from any game is included.') : null,
+        blocks.length ? aboutTable(['Game', 'Built from'], blocks.map(row)) : null);
     }).catch(() => body.closest('section')?.remove());
     return section('Starter templates', body);
   }

@@ -1,0 +1,200 @@
+{
+  "name": "Call of Cthulhu 7e stat block",
+  "game": "Call of Cthulhu",
+  "edition": "7e stat block",
+  "kind": "statblock",
+  "dice_game": "coc7",
+  "source": {
+    "title": "Keeper Rulebook, 7th edition (non-player character format)",
+    "owner": "Chaosium",
+    "url": "https://www.chaosium.com/call-of-cthulhu-rpg/",
+    "licence": null
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "occupation",
+            "label": "Occupation",
+            "type": "text",
+            "summary": true
+          },
+          {
+            "key": "age",
+            "label": "Age",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_characteristics",
+        "title": "Characteristics",
+        "abilities": true,
+        "fields": [
+          {
+            "key": "str",
+            "label": "STR",
+            "type": "number"
+          },
+          {
+            "key": "con",
+            "label": "CON",
+            "type": "number"
+          },
+          {
+            "key": "siz",
+            "label": "SIZ",
+            "type": "number"
+          },
+          {
+            "key": "dex",
+            "label": "DEX",
+            "type": "number"
+          },
+          {
+            "key": "app",
+            "label": "APP",
+            "type": "number"
+          },
+          {
+            "key": "int",
+            "label": "INT",
+            "type": "number"
+          },
+          {
+            "key": "pow",
+            "label": "POW",
+            "type": "number"
+          },
+          {
+            "key": "edu",
+            "label": "EDU",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "key": "s_vitals",
+        "title": "Vitals",
+        "compact": true,
+        "fields": [
+          {
+            "key": "hp",
+            "label": "HP",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "magic_points",
+            "label": "Magic points",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "sanity",
+            "label": "Sanity",
+            "type": "number"
+          },
+          {
+            "key": "damage_bonus",
+            "label": "Damage bonus",
+            "type": "text"
+          },
+          {
+            "key": "build",
+            "label": "Build",
+            "type": "number"
+          },
+          {
+            "key": "move",
+            "label": "Move",
+            "type": "number"
+          },
+          {
+            "key": "attacks_per_round",
+            "label": "Attacks per round",
+            "type": "number"
+          },
+          {
+            "key": "armour",
+            "label": "Armour",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_attacks",
+        "title": "Attacks",
+        "fields": [
+          {
+            "key": "attacks",
+            "label": "Attacks",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "chance",
+                "label": "Chance"
+              },
+              {
+                "key": "damage",
+                "label": "Damage"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_skills",
+        "title": "Skills",
+        "fields": [
+          {
+            "key": "skills",
+            "label": "Skills",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "chance",
+                "label": "Chance"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "spells",
+            "label": "Spells",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "sanity_loss",
+            "label": "Sanity loss",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}

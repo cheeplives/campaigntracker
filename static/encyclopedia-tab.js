@@ -473,6 +473,8 @@
     function characterCard(e) {
       const ch = S.encChars?.[e.id] || null;
       if (!ch?.sheet_visible) return null;
+      // an NPC's stat block shows in full, with its tracks and rolls (static/statblock.js), in place of the strip
+      if (ch.statblock && typeof Sheets !== 'undefined' && typeof StatBlock !== 'undefined') return Sheets.entryBlock(ch, e.name);
       const facts = (ch.summary || []).filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object');
       return el('a', { class: 'card enc-character', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': 'Open the character sheet' },
         el('span', { class: `chip kind-${ch.kind}` }, ch.kind === 'npc' ? 'NPC' : 'PC'),
@@ -571,12 +573,17 @@
       const fitBtn = canFit ? btn('⤢ Fit the picture in the circle', async () => {
         try { if (await DiscPic.frame(pic, (a, body) => post(a, body, S.camp.id))) { toast('Picture framed'); route(); } } catch (err) { toast(err.message, true); }
       }, 'small', 'Move and zoom the picture inside its round disc, so the face shows: on this page, the character sheet and the map') : null;
-      const edit = btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry');
+      // a stat block is on the page itself, with its own Full stat block, so Edit stays the head's main button
+      const openSheet = ch?.sheet_visible && !ch.statblock;
+      const edit = btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), openSheet ? 'small' : 'small primary', 'Change this entry');
+      const addBlock = () => btn('Add stat block', () => Sheets.addStatBlock(e).catch(err => toast(err.message, true)), 'small', 'Give this person a stat block: their numbers in the way the campaign\'s game writes up an NPC, shown on this page');
       const actions = el('div', { class: 'row enc-actions' },
-        ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
+        openSheet ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
         edit,
+        !ch && canSheet && e.category === 'person' ? addBlock() : null,
         assistantButton(),
         entryMenu(e, [
+          !ch && canSheet && !e.category ? addBlock() : null,
           !ch && canSheet && (!e.category || e.category === 'person')
             ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
           canSheet && (ch || !e.category || e.category === 'person')

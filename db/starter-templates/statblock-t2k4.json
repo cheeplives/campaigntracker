@@ -1,0 +1,178 @@
+{
+  "name": "Twilight: 2000 4e stat block",
+  "game": "Twilight: 2000",
+  "edition": "4e stat block",
+  "kind": "statblock",
+  "dice_game": "t2k4",
+  "source": {
+    "title": "Twilight: 2000 4th edition (NPC format)",
+    "owner": "Free League Publishing",
+    "url": "https://freeleaguepublishing.com/games/twilight-2000/",
+    "licence": null
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "experience",
+            "label": "Experience",
+            "type": "choice",
+            "options": [
+              "Novice",
+              "Experienced",
+              "Veteran",
+              "Elite"
+            ],
+            "summary": true
+          },
+          {
+            "key": "nationality",
+            "label": "Nationality",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_attributes",
+        "title": "Attributes",
+        "abilities": true,
+        "fields": [
+          {
+            "key": "str",
+            "label": "STR",
+            "type": "choice",
+            "options": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "key": "agl",
+            "label": "AGL",
+            "type": "choice",
+            "options": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "key": "int",
+            "label": "INT",
+            "type": "choice",
+            "options": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "key": "emp",
+            "label": "EMP",
+            "type": "choice",
+            "options": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_vitals",
+        "title": "Vitals",
+        "compact": true,
+        "fields": [
+          {
+            "key": "hit_capacity",
+            "label": "Hit capacity",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "stress_capacity",
+            "label": "Stress capacity",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "cuf",
+            "label": "Coolness under fire",
+            "type": "choice",
+            "options": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "key": "armour",
+            "label": "Armour",
+            "type": "text"
+          },
+          {
+            "key": "skills",
+            "label": "Skills",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_weapons",
+        "title": "Weapons",
+        "fields": [
+          {
+            "key": "weapons",
+            "label": "Weapons",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "damage",
+                "label": "Damage"
+              },
+              {
+                "key": "range",
+                "label": "Range"
+              },
+              {
+                "key": "ammo",
+                "label": "Ammo"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "gear",
+            "label": "Gear",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -51,7 +51,9 @@
       && typeof m.system === 'string' && /^[A-Za-z0-9_.-]{1,60}$/.test(m.system) && typeof m.path === 'string' && /^[A-Za-z0-9_.[\]-]{1,200}$/.test(m.path));
   }
 
-  function validate(layout) {
+  /** The problems with a layout, in words. opts.statblock: it is a stat block's, whose sections may be an abilities
+   * row (abilities: true, modifier: 'dnd') and which has no Holdings page. */
+  function validate(layout, opts = {}) {
     if (!isObj(layout) || !Array.isArray(layout.sections)) return ['A template needs a list of sections'];
     const out = [], keys = new Set();
     const key = (k, what) => {
@@ -68,6 +70,12 @@
       if (s.width !== undefined && !WIDTHS.includes(s.width)) out.push(`Section "${s.title}": a section's width is full, half, third or two-thirds`);
       if (s.compact !== undefined && typeof s.compact !== 'boolean') out.push(`Section "${s.title}": compact is on or off`);
       if (s.holdings !== undefined && typeof s.holdings !== 'boolean') out.push(`Section "${s.title}": holdings is on or off`);
+      if (s.abilities || s.modifier !== undefined) {
+        if (!opts.statblock) out.push('Only a stat block has an abilities row');
+        else if (s.abilities !== undefined && typeof s.abilities !== 'boolean') out.push(`Section "${s.title}": abilities is on or off`);
+        else if (s.modifier !== undefined && (s.modifier !== 'dnd' || !s.abilities)) out.push(`Section "${s.title}": a modifier is "dnd", on an abilities row`);
+      }
+      if (s.holdings === true && opts.statblock) out.push('A stat block has no Holdings page');
       if (s.holdings === true) {
         if (++holdings === 2) out.push('A template can have one Holdings section');
         if (Array.isArray(s.fields) && s.fields.length) out.push(`Section "${s.title}": a Holdings section has no fields of its own`);

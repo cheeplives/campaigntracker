@@ -17,7 +17,7 @@ test("Starter files: about forty, each a valid layout with its source, named by 
     const t = JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8"));
     expect(typeof t.name === "string" && t.name.trim() && t.name.length <= 150, `${f}: name`).toBeTruthy();
     expect(typeof t.game === "string" && t.game.trim() && t.game.length <= 100, `${f}: game`).toBeTruthy();
-    expect(L.validate(t.layout), f).toEqual([]);
+    expect(L.validate(t.layout, { statblock: t.kind === "statblock" }), f).toEqual([]);
     expect(L.fields(t.layout).size, `${f}: has fields`).toBeGreaterThan(3);
     expect(t.source && typeof t.source.title === "string" && typeof t.source.owner === "string" && /^https?:\/\//.test(t.source.url), `${f}: source`).toBeTruthy();
     // labels only: no rules text
@@ -28,6 +28,7 @@ test("Starter files: about forty, each a valid layout with its source, named by 
 test("Every starter has a Holdings page of the character's own, on a page of its own", () => {
   for (const f of files()) {
     const t = JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8"));
+    if (t.kind === "statblock") continue;   // an NPC stat block has no Holdings page (statblocks.spec.js)
     const h = t.layout.sections.filter(s => s.holdings);
     expect(h.length, `${f}: one Holdings section`).toBe(1);
     expect(h[0].fields, f).toEqual([]);
