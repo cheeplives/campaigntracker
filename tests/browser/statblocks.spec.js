@@ -37,9 +37,9 @@ async function setup(page, browser, game) {
 const templates = async page => (await (await page.request.get("api/index.php?a=templates")).json()).templates;
 const character = async (page, cid, id) => (await (await page.request.get(`api/index.php?a=character&cid=${cid}&id=${id}`)).json()).character;
 
-test("Stat block starters: nine, each valid, for a known dice game, with one for any game", () => {
+test("Stat block starters: ten, each valid, for a known dice game, with one for any game", () => {
   const ids = new Set(DS.PRESETS.map(g => g.id));
-  expect(blocks().length).toBe(9);
+  expect(blocks().length).toBe(10);
   for (const t of blocks()) {
     expect(t.kind, t.f).toBe("statblock");
     expect(L.validate(t.layout, { statblock: true }), t.f).toEqual([]);
@@ -49,7 +49,7 @@ test("Stat block starters: nine, each valid, for a known dice game, with one for
     expect([...L.fields(t.layout).values()].some(x => ["counter", "pips"].includes(x.field.type)), `${t.f}: a track`).toBe(true);
   }
   expect(blocks().filter(t => t.dice_game === undefined).map(t => t.f)).toEqual(["statblock-generic.json"]);
-  expect(new Set(blocks().map(t => t.dice_game)).size, "one starter a game").toBe(9);
+  expect(new Set(blocks().map(t => t.dice_game)).size, "one starter a game").toBe(10);
   // the server's list of dice games is the roller's
   const php = fs.readFileSync(path.join(__dirname, "..", "..", "api", "sheets.php"), "utf8").match(/const DICE_GAMES = \[([^\]]+)\]/)[1];
   expect(php.match(/'[a-z0-9]+'/g).map(x => x.slice(1, -1)).sort()).toEqual([...ids].sort());
@@ -99,11 +99,11 @@ test("The starters load as stat blocks, and the upgrade from before them adds th
   test.skip(info.project.name !== "chromium", "the server answers the same whatever the browser");
   await signIn(page, ADMIN);
   expect((await api(page, "starter_templates_load", {})).status).toBe(200);
-  expect(sql("SELECT COUNT(*) FROM sheet_templates WHERE kind='statblock' AND starter_key LIKE 'statblock-%'").trim()).toBe("9");
+  expect(sql("SELECT COUNT(*) FROM sheet_templates WHERE kind='statblock' AND starter_key LIKE 'statblock-%'").trim()).toBe("10");
   expect(sql("SELECT dice_game FROM sheet_templates WHERE starter_key='statblock-dnd5e'").trim()).toBe("dnd5e");
   expect(sql("SELECT COUNT(*) FROM sheet_templates WHERE kind='statblock' AND starter_key NOT LIKE 'statblock-%'").trim()).toBe("0");
   const about = (await (await page.request.get("api/index.php?a=starter_sources")).json()).starters;
-  expect(about.filter(s => s.statblock).length).toBe(9);
+  expect(about.filter(s => s.statblock).length).toBe(10);
   // the migration is what schema.sql says: the same two columns
   const mig = fs.readFileSync(path.join(__dirname, "..", "..", "db", "migrations", "062_statblocks.sql"), "utf8");
   expect(mig).toMatch(/ADD COLUMN kind ENUM\('sheet','statblock'\) NOT NULL DEFAULT 'sheet'/);
