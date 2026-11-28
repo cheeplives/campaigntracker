@@ -1,0 +1,139 @@
+{
+  "name": "Daggerheart adversary",
+  "game": "Daggerheart",
+  "edition": "Adversary stat block",
+  "kind": "statblock",
+  "dice_game": "daggerheart",
+  "source": {
+    "title": "Daggerheart System Reference Document 1.0 (adversary format)",
+    "owner": "Darrington Press",
+    "url": "https://www.daggerheart.com/srd",
+    "licence": "Darrington Press Community Gaming License (DPCGL)"
+  },
+  "layout": {
+    "sections": [
+      {
+        "key": "s_overview",
+        "title": "Overview",
+        "compact": true,
+        "fields": [
+          {
+            "key": "tier_type",
+            "label": "Tier and type",
+            "type": "text",
+            "summary": true
+          },
+          {
+            "key": "difficulty",
+            "label": "Difficulty",
+            "type": "text"
+          },
+          {
+            "key": "thresholds",
+            "label": "Thresholds",
+            "type": "text"
+          },
+          {
+            "key": "hp",
+            "label": "HP",
+            "type": "counter",
+            "play": true
+          },
+          {
+            "key": "stress",
+            "label": "Stress",
+            "type": "counter",
+            "play": true
+          }
+        ]
+      },
+      {
+        "key": "s_attack",
+        "title": "Attack",
+        "compact": true,
+        "fields": [
+          {
+            "key": "atk",
+            "label": "ATK",
+            "type": "text"
+          },
+          {
+            "key": "weapon",
+            "label": "Weapon",
+            "type": "text"
+          },
+          {
+            "key": "range",
+            "label": "Range",
+            "type": "text"
+          },
+          {
+            "key": "damage",
+            "label": "Damage",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "key": "s_details",
+        "title": "Details",
+        "fields": [
+          {
+            "key": "description",
+            "label": "Description",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "motives",
+            "label": "Motives and tactics",
+            "type": "text",
+            "size": "full"
+          },
+          {
+            "key": "experience",
+            "label": "Experience",
+            "type": "text",
+            "size": "full"
+          }
+        ]
+      },
+      {
+        "key": "s_features",
+        "title": "Features",
+        "fields": [
+          {
+            "key": "features",
+            "label": "Features",
+            "type": "list",
+            "columns": [
+              {
+                "key": "name",
+                "label": "Name"
+              },
+              {
+                "key": "type",
+                "label": "Type"
+              },
+              {
+                "key": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "s_more",
+        "title": "More",
+        "fields": [
+          {
+            "key": "notes",
+            "label": "Notes",
+            "type": "longtext"
+          }
+        ]
+      }
+    ]
+  }
+}
